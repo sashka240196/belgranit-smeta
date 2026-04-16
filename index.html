@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>БЕЛГРАНИТ - Калькулятор сметы</title>
+  <script src="tailwind.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<header class="bg-white border-b shadow-sm sticky top-0 z-50">
+  <div class="container mx-auto px-4 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <img src="logo.png" alt="БЕЛГРАНИТ" class="h-14" onerror="this.style.display='none'">
+      </div>
+      <div class="flex items-center gap-4">
+        <button id="theme_btn" onclick="toggleTheme()" title="Сменить тему"
+          style="background:transparent; border:1px solid var(--border); border-radius:8px; padding:8px 12px; cursor:pointer; font-size:18px; color:var(--text);">🌙</button>
+        <button onclick="showHistoryModal()" title="История смет"
+          style="background:transparent; border:1px solid var(--border); border-radius:8px; padding:8px 12px; cursor:pointer; font-size:13px; color:var(--primary); font-weight:600;">
+          📂 История
+        </button>
+        <div class="text-right">
+          <div class="text-sm" style="color: var(--text-light);">Курс доллара</div>
+          <div class="flex items-center gap-2">
+            <input type="number" id="rate" value="3" step="0.01" class="w-24 px-3 py-2 border rounded text-sm" oninput="updateRate()" style="background: var(--dark-light); color: var(--text); border-color: var(--border);">
+            <span class="text-sm font-medium" style="color: var(--primary);">BYN</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+</header>
+
+<!-- Main Tabs -->
+<div class="bg-white border-b" style="background: var(--dark); border-color: var(--border);">
+  <div class="container mx-auto px-4">
+    <!-- Mode Switcher -->
+    <div class="flex gap-3 py-2 border-b" style="border-color: var(--border);">
+      <button id="mode_wholesale" onclick="switchMode('wholesale')" class="mode-tab active">
+        💼 ОПТОВАЯ СМЕТА
+      </button>
+      <button id="mode_production" onclick="switchMode('production')" class="mode-tab">
+        🏭 ПРОИЗВОДСТВЕННАЯ СМЕТА
+      </button>
+    </div>
+    
+    <!-- View Tabs -->
+    <div class="flex gap-3 py-3">
+      <button id="tab_catalog" onclick="switchTab('catalog')" class="main-tab active">
+        📋 КАТАЛОГ
+      </button>
+      <button id="tab_estimate" onclick="switchTab('estimate')" class="main-tab">
+        🛒 СМЕТА <span id="cart_count" class="cart-badge">0</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Catalog View -->
+<div id="catalog_view" class="container mx-auto px-4 py-8" style="background: var(--bg);">
+  
+  <!-- Search -->
+  <div class="mb-6">
+    <input type="text" id="search" placeholder="🔍 Поиск по названию..." class="w-full px-5 py-3 border rounded-lg text-base" oninput="filterItems()" style="background: var(--dark-light); color: var(--text); border-color: var(--border);">
+  </div>
+
+  <!-- Category Tabs -->
+  <div class="category-tabs mb-8">
+    <button class="cat-tab active" data-cat="stele" onclick="switchCategory('stele')">Стела</button>
+    <button class="cat-tab" data-cat="pedestal" onclick="switchCategory('pedestal')">Подставка</button>
+    <button class="cat-tab" data-cat="flowerbed" onclick="switchCategory('flowerbed')">Цветник</button>
+    <button class="cat-tab" data-cat="gravestone" onclick="switchCategory('gravestone')">Надгробка</button>
+    <button class="cat-tab" data-cat="art" onclick="switchCategory('art')">Худ. работа</button>
+    <button class="cat-tab" data-cat="post" onclick="switchCategory('post')">Столб, пролёт</button>
+    <button class="cat-tab" data-cat="polish" onclick="switchCategory('polish')">Полировка</button>
+  </div>
+
+  <!-- Form Selector -->
+  <div class="mb-8 text-center">
+    <button onclick="showFormSelector()" class="text-base font-semibold hover:underline" style="color: var(--primary);">
+      🔍 Выбрать форму (В-1 — В-219, Г-1 — Г-66)
+    </button>
+  </div>
+
+  <!-- Items List -->
+  <div id="items_list" class="space-y-3"></div>
+
+  <!-- Granite Calculator -->
+  <div id="granite_calculator" class="card mt-6">
+    <div class="card-header">
+      <h3 class="font-bold text-lg">ЦВЕТНОЙ ГРАНИТ — КАЛЬКУЛЯТОР</h3>
+    </div>
+    <div class="card-body space-y-4">
+      <div>
+        <label class="label">Тип гранита</label>
+        <select id="granite_type" class="input-field" onchange="calcGranite()">
+          <option value="mansurovsky">Мансуровский / Амфиболит / Елизовский</option>
+          <option value="kapustinsky">Капустинский / Уральский серый</option>
+          <option value="pokostovsky">Мрамор «Коелга» / Лабрадорит / Покостовский</option>
+          <option value="baltikgrin">Балтик-грин / Бармораль ред / Куру грей</option>
+          <option value="aurora">Аврора / Лезник / Висконт-Уайт</option>
+          <option value="bluepearl">Блю перл</option>
+          <option value="gabbro">Габбро-диабаз</option>
+        </select>
+        <div id="granite_colors" class="flex gap-2 mt-2"></div>
+      </div>
+      <div>
+        <label class="label">Изделие</label>
+        <select id="granite_product" class="input-field" onchange="calcGranite()">
+          <option value="stele_5">Стела (5см) — м²</option>
+          <option value="stele_8">Стела (8см) — м²</option>
+          <option value="stele_10">Стела (10см) — м²</option>
+          <option value="gravestone_3">Надгробка (3см) — м²</option>
+          <option value="gravestone_5">Надгробка (5см) — м²</option>
+          <option value="gravestone_8">Надгробка (8см) — м²</option>
+          <option value="pedestal">Подставка — м³</option>
+          <option value="flowerbed">Цветник 8х5 — м.п.</option>
+          <option value="post">Столб 10х10 — м.п.</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-4 gap-3">
+        <div>
+          <label class="label">Высота (см)</label>
+          <input type="number" id="granite_h" value="100" class="input-field" oninput="calcGranite()">
+        </div>
+        <div>
+          <label class="label">Ширина (см)</label>
+          <input type="number" id="granite_w" value="50" class="input-field" oninput="calcGranite()">
+        </div>
+        <div>
+          <label class="label">Толщина (см)</label>
+          <input type="number" id="granite_t" value="5" class="input-field" oninput="calcGranite()">
+        </div>
+        <div>
+          <label class="label">Кол-во (шт)</label>
+          <input type="number" id="granite_qty" value="1" min="1" class="input-field" oninput="calcGranite()">
+        </div>
+      </div>
+      <div class="text-xs text-gray-500 italic">
+        * При размерах более 0,7 м² +10%, более 0,9 м² +20%<br>
+        * При высоте более 1,2 м +10%, более 1,4 м +20%
+      </div>
+      <div class="flex items-center justify-between text-sm">
+        <span>Цена за ед: <strong id="granite_unit_price">94$/ед</strong></span>
+        <span class="text-xl font-bold text-primary" id="granite_total">47.00$</span>
+      </div>
+      <button onclick="addGraniteToCart()" class="btn-add w-full">
+        ➕ Добавить в смету
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Estimate View -->
+<div id="estimate_view" class="container mx-auto px-4 py-8 hidden" style="background: var(--bg);">
+  
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- Cart Items -->
+    <div class="lg:col-span-2">
+      <div class="card">
+        <div class="card-header flex justify-between items-center">
+          <h3 class="font-bold text-lg">Позиции сметы</h3>
+          <button onclick="clearCart()" class="text-sm text-red-600 hover:text-red-800">Очистить всё</button>
+        </div>
+        <div class="card-body">
+          <div id="cart_items" class="space-y-2"></div>
+          <div id="cart_empty" class="text-center py-8 text-gray-400">
+            Смета пуста. Добавьте позиции из каталога.
+          </div>
+        </div>
+      </div>
+
+      <!-- Client Info -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h3 class="font-bold">Информация о заказчике</h3>
+        </div>
+        <div class="card-body space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <input type="text" id="client_name" placeholder="ФИО заказчика" class="input-field">
+            <input type="tel" id="client_phone" placeholder="+375 29 123-45-67" class="input-field">
+          </div>
+          <div>
+            <input type="date" id="order_date" class="input-field">
+          </div>
+          <textarea id="order_note" rows="2" placeholder="Примечание..." class="input-field"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="lg:col-span-1">
+      <div class="card sticky top-20">
+        <div class="summary-header">ИТОГО</div>
+        <div class="card-body space-y-3">
+          <div class="summary-row">
+            <span>Позиций:</span>
+            <span id="sum_count">0</span>
+          </div>
+
+          <!-- Наценка / Скидка -->
+          <div class="space-y-2 pb-2" style="border-bottom: 1px solid var(--border);">
+            <div class="flex items-center gap-2">
+              <label class="text-xs" style="color:var(--text-light); width:70px;">Наценка %</label>
+              <input type="number" id="markup_val" value="0" min="0" max="200" step="1"
+                class="w-20 px-2 py-1 text-sm border rounded"
+                style="background:var(--input-bg);color:var(--input-text);"
+                onchange="setMarkup(this.value)">
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs" style="color:var(--text-light); width:70px;">Скидка %</label>
+              <input type="number" id="discount_val" value="0" min="0" max="100" step="1"
+                class="w-20 px-2 py-1 text-sm border rounded"
+                style="background:var(--input-bg);color:var(--input-text);"
+                onchange="setDiscount(this.value)">
+            </div>
+          </div>
+
+          <!-- Разбивка по категориям -->
+          <div id="category_breakdown" class="space-y-0 text-sm"></div>
+
+          <div class="summary-row" style="border-top: 1px solid var(--border); padding-top:10px;">
+            <span>Итого ($):</span>
+            <span id="sum_usd" style="color:var(--primary); font-weight:700;">$0</span>
+          </div>
+          <div class="summary-row font-bold text-lg">
+            <span>Итого (BYR):</span>
+            <span id="sum_byr" class="text-primary">0 руб.</span>
+          </div>
+          
+          <div class="pt-3 space-y-2" style="border-top: 1px solid var(--border);">
+            <button onclick="saveEstimate()" class="btn-secondary w-full">💾 Сохранить смету</button>
+            <button onclick="printEstimate()" class="btn-primary w-full">🖨 Печать</button>
+            <button onclick="copyEstimate()" class="btn-secondary w-full">📋 Копировать</button>
+            <div class="text-center text-sm mt-3" style="color:var(--text-light)">Поделиться:</div>
+            <div class="flex gap-2 justify-center flex-wrap">
+              <button onclick="shareViber()" class="share-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11.4 0C9.473.028 5.333.344 3.02 2.467 1.302 4.187.696 6.7.633 9.817.57 12.933.488 18.617 6.55 20.42h.005l-.004 2.539s-.037.98.61 1.177c.777.237 1.234-.5 1.98-1.302.407-.44.97-1.084 1.397-1.58 3.85.323 6.812-.417 7.149-.525.776-.253 5.176-.816 5.892-6.657.74-6.02-.36-9.83-2.34-11.546l-.01-.005C19.683.51 15.756.015 11.4 0zm.058 1.693c3.88.014 7.36.44 8.827 1.827 1.67 1.55 2.577 4.94 1.91 10.28-.616 4.94-4.05 5.22-4.71 5.43-.28.09-2.88.737-6.14.465 0 0-2.43 2.93-3.19 3.71-.12.13-.26.17-.35.15-.13-.03-.17-.19-.16-.41l.02-4.19c-5.12-1.48-4.8-6.38-4.74-8.97.055-2.6.567-4.73 2.02-6.15 1.862-1.82 5.41-2.134 7.45-2.14z"/></svg>
+                Viber
+              </button>
+              <button onclick="shareTG()" class="share-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
+                Telegram
+              </button>
+              <button onclick="shareWA()" class="share-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- History Modal -->
+<div id="history_modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold" style="color:var(--primary)">📂 История смет</h3>
+      <button onclick="closeHistoryModal()" style="font-size:24px; background:none; border:none; cursor:pointer; color:var(--text);">&times;</button>
+    </div>
+    <div id="history_list" class="max-h-96 overflow-y-auto space-y-1"></div>
+  </div>
+</div>
+
+<!-- Form Selector Modal -->
+<div id="form_modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold">Выбор формы стелы</h3>
+      <button onclick="closeFormModal()" class="text-2xl">&times;</button>
+    </div>
+    <div class="mb-4">
+      <input type="text" id="form_search" placeholder="Поиск формы (В-1, Г-10...)" class="input-field" oninput="filterForms()">
+    </div>
+    <div id="forms_list" class="max-h-96 overflow-y-auto space-y-1"></div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer style="background: var(--dark); border-top: 2px solid var(--primary); margin-top: 60px;">
+  <div class="container mx-auto px-4 py-8">
+    <div class="text-center">
+      <p style="color: var(--text-light); font-size: 14px;">
+        © 2024 БЕЛГРАНИТ. Все права защищены.
+      </p>
+      <p style="color: var(--text-light); font-size: 13px; margin-top: 8px;">
+        Калькулятор сметы на изготовление памятников
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
