@@ -344,27 +344,37 @@ function renderItems() {
   // Custom size calculator for this category
   const showCustomSize = ['stele', 'pedestal', 'flowerbed', 'gravestone', 'post'].includes(state.currentCategory);
   
-  let html = items.map(item => `
+  let html = items.map((item, idx) => `
     <div class="item-card">
       <div class="flex-1">
         <div class="item-name">${item.name}</div>
-        <div class="flex gap-3 mt-2 items-center">
+        <div class="flex gap-2 mt-1 items-center flex-wrap">
           <div class="flex items-center gap-1">
-            <label class="text-xs text-gray-600">Кол-во:</label>
-            <input type="number" min="1" value="1" id="qty_${item.name}" class="w-16 px-2 py-1 text-xs border rounded">
-            <span class="text-xs">${item.unit}</span>
+            <label class="text-xs" style="color:var(--text-light)">Кол-во:</label>
+            <input type="number" min="1" value="1" id="qty_${item.name}" class="w-14 px-1 py-0.5 text-xs border rounded">
+            <span class="text-xs" style="color:var(--text-light)">${item.unit}</span>
           </div>
           ${item.unit === 'м.п.' ? `
           <div class="flex items-center gap-1">
-            <label class="text-xs text-gray-600">Метры:</label>
-            <input type="number" min="0.1" step="0.1" value="1" id="meters_${item.name}" class="w-16 px-2 py-1 text-xs border rounded">
-            <span class="text-xs">м.п.</span>
+            <label class="text-xs" style="color:var(--text-light)">Метры:</label>
+            <input type="number" min="0.1" step="0.1" value="1" id="meters_${item.name}" class="w-14 px-1 py-0.5 text-xs border rounded">
+            <span class="text-xs" style="color:var(--text-light)">м.п.</span>
           </div>
           ` : ''}
         </div>
       </div>
-      <div class="flex items-center gap-3">
-        <div class="item-price">${item.price}$</div>
+      <div class="flex items-center gap-2">
+        <div class="flex flex-col items-end gap-1">
+          <div class="flex items-center gap-1">
+            <input type="number" value="${item.price}" min="0" step="0.5"
+              class="w-20 px-1 py-0.5 text-sm border rounded text-right font-bold"
+              style="background:var(--input-bg);color:var(--input-text);"
+              onchange="updateCatalogPrice('${item.name}', this.value)"
+              title="Редактировать цену">
+            <span class="text-xs" style="color:var(--primary)">$</span>
+          </div>
+          <span class="text-xs" style="color:var(--text-light)">${(item.price * getRate()).toFixed(0)} р.</span>
+        </div>
         <button class="item-add-btn" onclick='addToCartWithQty(${JSON.stringify(item)})'>+</button>
       </div>
     </div>
@@ -405,6 +415,17 @@ function renderItems() {
   }
   
   container.innerHTML = html;
+}
+
+function updateCatalogPrice(itemName, newPrice) {
+  const price = parseFloat(newPrice) || 0;
+  const allArrays = [KARELIA_STELE, KARELIA_GRAVESTONE, KARELIA_PEDESTAL, 
+                     KARELIA_FLOWERBED, KARELIA_POST, POLISHING,
+                     ...Object.values(ART_WORK)];
+  for (const arr of allArrays) {
+    const item = arr.find(i => i.name === itemName);
+    if (item) { item.price = price; break; }
+  }
 }
 
 function addCustomSize() {

@@ -11,47 +11,43 @@
 <body class="bg-gray-50">
 
 <!-- Header -->
-<header class="bg-white border-b shadow-sm sticky top-0 z-50">
-  <div class="container mx-auto px-4 py-4">
+<header class="sticky top-0 z-50">
+  <div class="container mx-auto px-4 py-2">
     <div class="flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <img src="logo.png" alt="БЕЛГРАНИТ" class="h-14" onerror="this.style.display='none'">
+      <div class="flex items-center gap-3">
+        <img src="logo.png" alt="БЕЛГРАНИТ" class="h-10" id="header_logo"
+          onerror="this.style.display='none'; document.getElementById('header_logo_text').style.display='block'">
+        <span id="header_logo_text" class="font-bold text-lg" style="color:var(--primary); display:none;">БЕЛГРАНИТ</span>
       </div>
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
         <button id="theme_btn" onclick="toggleTheme()" title="Сменить тему"
-          style="background:transparent; border:1px solid var(--border); border-radius:8px; padding:8px 12px; cursor:pointer; font-size:18px; color:var(--text);">🌙</button>
+          style="background:transparent; border:1px solid var(--border); border-radius:8px; padding:5px 10px; cursor:pointer; font-size:16px; color:var(--text);">🌙</button>
         <button onclick="showHistoryModal()" title="История смет"
-          style="background:transparent; border:1px solid var(--border); border-radius:8px; padding:8px 12px; cursor:pointer; font-size:13px; color:var(--primary); font-weight:600;">
+          style="background:transparent; border:1px solid var(--border); border-radius:8px; padding:5px 10px; cursor:pointer; font-size:12px; color:var(--primary); font-weight:600;">
           📂 История
         </button>
-        <div class="text-right">
-          <div class="text-sm" style="color: var(--text-light);">Курс доллара</div>
-          <div class="flex items-center gap-2">
-            <input type="number" id="rate" value="3" step="0.01" class="w-24 px-3 py-2 border rounded text-sm" oninput="updateRate()" style="background: var(--dark-light); color: var(--text); border-color: var(--border);">
-            <span class="text-sm font-medium" style="color: var(--primary);">BYN</span>
-          </div>
+        <div class="flex items-center gap-1">
+          <span class="text-xs" style="color: var(--text-light);">$:</span>
+          <input type="number" id="rate" value="3" step="0.01" class="w-16 px-2 py-1 border rounded text-sm" oninput="updateRate()" style="background: var(--dark-light); color: var(--text); border-color: var(--border);">
+          <span class="text-xs font-medium" style="color: var(--primary);">BYN</span>
         </div>
       </div>
     </div>
   </div>
 </header>
-</header>
 
 <!-- Main Tabs -->
-<div class="bg-white border-b" style="background: var(--dark); border-color: var(--border);">
+<div style="background: var(--dark); border-bottom: 1px solid var(--border);">
   <div class="container mx-auto px-4">
-    <!-- Mode Switcher -->
-    <div class="flex gap-3 py-2 border-b" style="border-color: var(--border);">
+    <div class="flex items-center gap-1 py-1 border-b" style="border-color: var(--border);">
       <button id="mode_wholesale" onclick="switchMode('wholesale')" class="mode-tab active">
-        💼 ОПТОВАЯ СМЕТА
+        💼 ОПТОВАЯ
       </button>
       <button id="mode_production" onclick="switchMode('production')" class="mode-tab">
-        🏭 ПРОИЗВОДСТВЕННАЯ СМЕТА
+        🏭 ПРОИЗВОДСТВЕННАЯ
       </button>
     </div>
-    
-    <!-- View Tabs -->
-    <div class="flex gap-3 py-3">
+    <div class="flex gap-1 py-1">
       <button id="tab_catalog" onclick="switchTab('catalog')" class="main-tab active">
         📋 КАТАЛОГ
       </button>
@@ -63,15 +59,15 @@
 </div>
 
 <!-- Catalog View -->
-<div id="catalog_view" class="container mx-auto px-4 py-8" style="background: var(--bg);">
+<div id="catalog_view" class="container mx-auto px-3 py-4">
   
   <!-- Search -->
-  <div class="mb-6">
-    <input type="text" id="search" placeholder="🔍 Поиск по названию..." class="w-full px-5 py-3 border rounded-lg text-base" oninput="filterItems()" style="background: var(--dark-light); color: var(--text); border-color: var(--border);">
+  <div class="mb-3">
+    <input type="text" id="search" placeholder="🔍 Поиск по названию..." class="w-full px-3 py-2 border rounded text-sm" oninput="filterItems()" style="background: var(--dark-light); color: var(--text); border-color: var(--border);">
   </div>
 
   <!-- Category Tabs -->
-  <div class="category-tabs mb-8">
+  <div class="category-tabs mb-4">
     <button class="cat-tab active" data-cat="stele" onclick="switchCategory('stele')">Стела</button>
     <button class="cat-tab" data-cat="pedestal" onclick="switchCategory('pedestal')">Подставка</button>
     <button class="cat-tab" data-cat="flowerbed" onclick="switchCategory('flowerbed')">Цветник</button>
@@ -82,14 +78,14 @@
   </div>
 
   <!-- Form Selector -->
-  <div class="mb-8 text-center">
-    <button onclick="showFormSelector()" class="text-base font-semibold hover:underline" style="color: var(--primary);">
+  <div class="mb-3 text-center">
+    <button onclick="showFormSelector()" class="text-sm font-semibold hover:underline" style="color: var(--primary);">
       🔍 Выбрать форму (В-1 — В-219, Г-1 — Г-66)
     </button>
   </div>
 
   <!-- Items List -->
-  <div id="items_list" class="space-y-3"></div>
+  <div id="items_list" class="space-y-2"></div>
 
   <!-- Granite Calculator -->
   <div id="granite_calculator" class="card mt-6">
@@ -159,7 +155,7 @@
 </div>
 
 <!-- Estimate View -->
-<div id="estimate_view" class="container mx-auto px-4 py-8 hidden" style="background: var(--bg);">
+<div id="estimate_view" class="container mx-auto px-3 py-4 hidden">
   
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     
