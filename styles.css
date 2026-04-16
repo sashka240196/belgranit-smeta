@@ -839,3 +839,170 @@ button[onclick="showFormSelector()"]:hover {
 body.light-theme {
   background: var(--bg);
 }
+
+/* ═══ CATALOG TABLE LAYOUT ═══════════════════════════════════════════════════ */
+
+.catalog-group {
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.catalog-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: var(--dark-light);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+  transition: background 0.2s;
+  border-bottom: 1px solid var(--border);
+}
+
+.catalog-group-header:hover {
+  background: var(--dark-lighter);
+}
+
+.catalog-group-arrow {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.catalog-group-body {
+  display: block;
+}
+
+.catalog-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.catalog-row {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.catalog-row:last-child {
+  border-bottom: none;
+}
+
+.catalog-row:hover {
+  background: var(--dark-lighter);
+}
+
+.catalog-custom-row {
+  background: rgba(201, 169, 97, 0.05);
+}
+
+.catalog-name {
+  padding: 6px 8px 6px 14px;
+  font-size: 13px;
+  color: var(--text);
+  width: 45%;
+}
+
+.catalog-unit {
+  padding: 6px 4px;
+  font-size: 11px;
+  color: var(--text-light);
+  white-space: nowrap;
+  width: 5%;
+}
+
+.catalog-price-cell {
+  padding: 4px 4px;
+  white-space: nowrap;
+  width: 13%;
+}
+
+.catalog-price-input {
+  width: 64px;
+  padding: 3px 5px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  text-align: right;
+}
+
+.catalog-price-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.catalog-currency {
+  font-size: 11px;
+  color: var(--primary);
+  margin-left: 2px;
+}
+
+.catalog-byr {
+  padding: 4px 6px;
+  font-size: 11px;
+  color: var(--text-light);
+  white-space: nowrap;
+  width: 10%;
+}
+
+.catalog-qty-cell {
+  padding: 4px 4px;
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  width: 20%;
+}
+
+.catalog-qty-input {
+  width: 46px;
+  padding: 3px 4px;
+  font-size: 12px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.catalog-qty-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.catalog-add-btn {
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.catalog-add-btn:hover {
+  background: var(--primary);
+  color: var(--dark);
+}
+
+/* Скрыть старые item-card */
+.item-card {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .catalog-byr { display: none; }
+  .catalog-name { width: 50%; }
+  .catalog-qty-input { width: 38px; }
+  .catalog-price-input { width: 52px; }
+}

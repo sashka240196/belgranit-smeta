@@ -310,111 +310,130 @@ function switchCategory(cat) {
 
 function renderItems() {
   const container = document.getElementById('items_list');
-  
-  // Hide items in production mode
+
   if (state.currentMode === 'production') {
-    container.innerHTML = '<div class="text-center py-8 text-gray-500">Производственная смета будет заполнена позже</div>';
+    container.innerHTML = '<div class="text-center py-8" style="color:var(--text-light)">Производственная смета будет заполнена позже</div>';
     return;
   }
-  
-  let items = [];
-  
-  // Handle artistic work subcategories
-  if (state.currentCategory === 'art') {
-    renderArtWork();
-    return;
+
+  if (state.currentCategory !== 'all' && state.searchQuery === '') {
+    // режим одной категории (при клике на таб)
   }
-  
-  switch (state.currentCategory) {
-    case 'stele': items = KARELIA_STELE; break;
-    case 'pedestal': items = KARELIA_PEDESTAL; break;
-    case 'flowerbed': items = KARELIA_FLOWERBED; break;
-    case 'gravestone': items = KARELIA_GRAVESTONE; break;
-    case 'post': items = KARELIA_POST; break;
-    case 'polish': items = POLISHING; break;
-  }
-  
-  // Filter by search
-  if (state.searchQuery) {
-    items = items.filter(item => 
-      item.name.toLowerCase().includes(state.searchQuery.toLowerCase())
-    );
-  }
-  
-  // Custom size calculator for this category
-  const showCustomSize = ['stele', 'pedestal', 'flowerbed', 'gravestone', 'post'].includes(state.currentCategory);
-  
-  let html = items.map((item, idx) => `
-    <div class="item-card">
-      <div class="flex-1">
-        <div class="item-name">${item.name}</div>
-        <div class="flex gap-2 mt-1 items-center flex-wrap">
-          <div class="flex items-center gap-1">
-            <label class="text-xs" style="color:var(--text-light)">Кол-во:</label>
-            <input type="number" min="1" value="1" id="qty_${item.name}" class="w-14 px-1 py-0.5 text-xs border rounded">
-            <span class="text-xs" style="color:var(--text-light)">${item.unit}</span>
-          </div>
-          ${item.unit === 'м.п.' ? `
-          <div class="flex items-center gap-1">
-            <label class="text-xs" style="color:var(--text-light)">Метры:</label>
-            <input type="number" min="0.1" step="0.1" value="1" id="meters_${item.name}" class="w-14 px-1 py-0.5 text-xs border rounded">
-            <span class="text-xs" style="color:var(--text-light)">м.п.</span>
-          </div>
-          ` : ''}
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="flex flex-col items-end gap-1">
-          <div class="flex items-center gap-1">
-            <input type="number" value="${item.price}" min="0" step="0.5"
-              class="w-20 px-1 py-0.5 text-sm border rounded text-right font-bold"
-              style="background:var(--input-bg);color:var(--input-text);"
-              onchange="updateCatalogPrice('${item.name}', this.value)"
-              title="Редактировать цену">
-            <span class="text-xs" style="color:var(--primary)">$</span>
-          </div>
-          <span class="text-xs" style="color:var(--text-light)">${(item.price * getRate()).toFixed(0)} р.</span>
-        </div>
-        <button class="item-add-btn" onclick='addToCartWithQty(${JSON.stringify(item)})'>+</button>
-      </div>
-    </div>
-  `).join('');
-  
-  // Add custom size calculator
-  if (showCustomSize) {
+
+  const categories = [
+    { key: 'stele',     label: 'Стела',          items: KARELIA_STELE },
+    { key: 'gravestone',label: 'Надгробка',       items: KARELIA_GRAVESTONE },
+    { key: 'pedestal',  label: 'Подставка',       items: KARELIA_PEDESTAL },
+    { key: 'flowerbed', label: 'Цветник',         items: KARELIA_FLOWERBED },
+    { key: 'post',      label: 'Столб / Пролёт',  items: KARELIA_POST },
+    { key: 'polish',    label: 'Полировка',       items: POLISHING },
+  ];
+
+  // Художественные работы — добавляем как группы
+  const artGroups = [
+    { key: 'art_stanok',    label: 'Худ. работа — Станок',              items: ART_WORK.stanok },
+    { key: 'art_standard',  label: 'Худ. работа — Пескоструй Стандарт', items: ART_WORK.peskostroy_standard },
+    { key: 'art_deep',      label: 'Худ. работа — Пескоструй Углубл.',  items: ART_WORK.peskostroy_deep },
+  ];
+
+  const allGroups = [...categories, ...artGroups];
+
+  let html = '';
+
+  for (const group of allGroups) {
+    let items = group.items;
+
+    // Фильтр по поиску
+    if (state.searchQuery) {
+      items = items.filter(i => i.name.toLowerCase().includes(state.searchQuery.toLowerCase()));
+      if (!items.length) continue;
+    }
+
+    const showCustomSize = ['stele','gravestone','pedestal','flowerbed','post'].includes(group.key);
+    const hasCustom = showCustomSize && !state.searchQuery;
+
     html += `
-      <div class="card mt-6">
-        <div class="card-header">
-          <h3 class="font-bold text-base">НЕСТАНДАРТНЫЙ РАЗМЕР</h3>
+      <div class="catalog-group" id="group_${group.key}">
+        <div class="catalog-group-header" onclick="toggleGroup('${group.key}')">
+          <span>${group.label}</span>
+          <span class="catalog-group-arrow" id="arrow_${group.key}">▾</span>
         </div>
-        <div class="card-body space-y-3">
-          <div class="grid grid-cols-3 gap-3">
-            <div>
-              <label class="label text-xs">Высота (см)</label>
-              <input type="number" id="custom_h" value="100" class="input-field text-sm">
-            </div>
-            <div>
-              <label class="label text-xs">Ширина (см)</label>
-              <input type="number" id="custom_w" value="50" class="input-field text-sm">
-            </div>
-            <div>
-              <label class="label text-xs">Толщина (см)</label>
-              <input type="number" id="custom_t" value="5" class="input-field text-sm">
-            </div>
-          </div>
-          <div>
-            <label class="label text-xs">Цена за единицу ($)</label>
-            <input type="number" id="custom_price" value="50" step="0.1" class="input-field text-sm">
-          </div>
-          <button onclick="addCustomSize()" class="btn-add w-full text-sm py-2">
-            ➕ Добавить нестандартный размер
-          </button>
+        <div class="catalog-group-body" id="body_${group.key}">
+          <table class="catalog-table">
+            <tbody>
+              ${items.map(item => `
+              <tr class="catalog-row">
+                <td class="catalog-name">${item.name}</td>
+                <td class="catalog-unit">${item.unit}</td>
+                <td class="catalog-price-cell">
+                  <input type="number" value="${item.price}" min="0" step="0.5"
+                    class="catalog-price-input"
+                    onchange="updateCatalogPrice('${item.name}', this.value)"
+                    title="Изменить цену">
+                  <span class="catalog-currency">$</span>
+                </td>
+                <td class="catalog-byr">${(item.price * getRate()).toFixed(0)}р</td>
+                <td class="catalog-qty-cell">
+                  <input type="number" min="1" value="1" id="qty_${item.name}" class="catalog-qty-input">
+                  ${item.unit === 'м.п.' ? `<input type="number" min="0.1" step="0.1" value="1" id="meters_${item.name}" class="catalog-qty-input" title="м.п.">` : ''}
+                </td>
+                <td>
+                  <button class="catalog-add-btn" onclick='addToCartWithQty(${JSON.stringify(item)})'>+</button>
+                </td>
+              </tr>
+              `).join('')}
+              ${hasCustom ? `
+              <tr class="catalog-row catalog-custom-row">
+                <td colspan="2" class="catalog-name" style="color:var(--text-light);font-style:italic">Нестандартный размер</td>
+                <td class="catalog-price-cell">
+                  <input type="number" id="custom_price" value="50" step="0.5" class="catalog-price-input">
+                  <span class="catalog-currency">$</span>
+                </td>
+                <td></td>
+                <td class="catalog-qty-cell">
+                  <input type="text" id="custom_h" value="100" class="catalog-qty-input" title="Высота">
+                  <input type="text" id="custom_w" value="50" class="catalog-qty-input" title="Ширина">
+                  <input type="text" id="custom_t" value="5" class="catalog-qty-input" title="Толщина">
+                </td>
+                <td>
+                  <button class="catalog-add-btn" onclick="addCustomSize()">+</button>
+                </td>
+              </tr>
+              ` : ''}
+            </tbody>
+          </table>
         </div>
       </div>
     `;
   }
-  
-  container.innerHTML = html;
+
+  container.innerHTML = html || '<div class="text-center py-6" style="color:var(--text-light)">Ничего не найдено</div>';
+}
+
+function toggleGroup(key) {
+  const body = document.getElementById('body_' + key);
+  const arrow = document.getElementById('arrow_' + key);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  arrow.textContent = isOpen ? '▸' : '▾';
+}
+
+function switchCategory(cat) {
+  state.currentCategory = cat;
+  document.querySelectorAll('.cat-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === cat);
+  });
+  renderItems();
+  // Прокрутка к нужной группе
+  if (cat !== 'all') {
+    const map = { art: 'art_stanok' };
+    const key = map[cat] || cat;
+    setTimeout(() => {
+      const el = document.getElementById('group_' + key);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
 }
 
 function updateCatalogPrice(itemName, newPrice) {
