@@ -335,18 +335,6 @@ function switchTab(tab) {
   }
 }
 
-// ═══ CATEGORY SWITCHING ══════════════════════════════════════════════════════
-
-function switchCategory(cat) {
-  state.currentCategory = cat;
-  
-  document.querySelectorAll('.cat-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.cat === cat);
-  });
-  
-  renderItems();
-}
-
 // ═══ RENDER ITEMS ════════════════════════════════════════════════════════════
 
 function renderItems() {
@@ -613,16 +601,32 @@ function renderCart() {
   
   empty.classList.add('hidden');
   
+  // В производственной смете цены в BYN, в оптовой в USD
+  const isProduction = state.currentMode === 'production';
+  
   container.innerHTML = state.cart.map(item => {
     const itemTotal = item.price * (item.qty || 1) * (item.unit === 'м.п.' ? (item.meters || 1) : 1);
     const imageHtml = item.image ? `<img src="${item.image}" alt="${item.name}" class="cart-item-image" onerror="this.style.display='none'">` : '';
+    
+    // Форматирование цены в зависимости от режима
+    let priceDisplay, totalDisplay;
+    if (isProduction) {
+      priceDisplay = `${item.unit} × ${item.price.toFixed(0)} руб.`;
+      totalDisplay = `<div class="font-bold" style="color: var(--primary);">${itemTotal.toFixed(0)} руб.</div>`;
+    } else {
+      priceDisplay = `${item.unit} × ${item.price}$ / ${fmtBYR(item.price * getRate())}`;
+      totalDisplay = `
+        <div class="font-bold" style="color: var(--primary);">${itemTotal.toFixed(2)}$</div>
+        <div class="text-xs" style="color:var(--text-light)">${fmtBYR(usdToBYR(itemTotal))}</div>
+      `;
+    }
     
     return `
     <div class="cart-item">
       ${imageHtml}
       <div class="flex-1">
         <div class="font-medium">${item.name}</div>
-        <div class="text-sm" style="color: var(--text-light);">${item.unit} × ${item.price}$ / ${fmtBYR(item.price * getRate())}</div>
+        <div class="text-sm" style="color: var(--text-light);">${priceDisplay}</div>
         <div class="flex flex-wrap gap-2 mt-2">
           <div class="flex items-center gap-1">
             <label class="text-xs" style="color:var(--text-light)">Кол-во:</label>
@@ -631,13 +635,13 @@ function renderCart() {
               onchange="updateCartItemQty(${item.id}, this.value, 'qty')">
             <span class="text-xs" style="color:var(--text-light)">шт</span>
           </div>
-          ${item.unit === 'м.п.' ? `
+          ${item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' ? `
           <div class="flex items-center gap-1">
             <label class="text-xs" style="color:var(--text-light)">Метры:</label>
             <input type="number" min="0.1" step="0.1" value="${item.meters || 1}" 
               class="w-16 px-2 py-1 text-sm border rounded cart-qty-input" 
               onchange="updateCartItemQty(${item.id}, this.value, 'meters')">
-            <span class="text-xs" style="color:var(--text-light)">м.п.</span>
+            <span class="text-xs" style="color:var(--text-light)">${item.unit}</span>
           </div>
           ` : ''}
         </div>
@@ -646,8 +650,7 @@ function renderCart() {
           onchange="updateCartItemNote(${item.id}, this.value)">
       </div>
       <div class="flex flex-col items-end gap-1">
-        <div class="font-bold" style="color: var(--primary);">${itemTotal.toFixed(2)}$</div>
-        <div class="text-xs" style="color:var(--text-light)">${fmtBYR(usdToBYR(itemTotal))}</div>
+        ${totalDisplay}
         <span class="cart-item-remove" onclick="removeFromCart(${item.id})">×</span>
       </div>
     </div>
@@ -674,19 +677,30 @@ function updateCartItemNote(id, value) {
 }
 
 function updateSummary() {
-  const subtotalUSD = state.cart.reduce((sum, item) => {
-    const itemTotal = item.price * (item.qty || 1) * (item.unit === 'м.п.' ? (item.meters || 1) : 1);
+  const isProduction = state.currentMode === 'production';
+  
+  const subtotal = state.cart.reduce((sum, item) => {
+    const itemTotal = item.price * (item.qty || 1) * (item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' ? (item.meters || 1) : 1);
     return sum + itemTotal;
   }, 0);
 
   // Apply markup/discount
   const adj = 1 + (state.markup - state.discount) / 100;
-  const totalUSD = subtotalUSD * adj;
-  const totalBYR = usdToBYR(totalUSD);
+  const total = subtotal * adj;
 
   document.getElementById('sum_count').textContent = state.cart.length;
-  document.getElementById('sum_usd').textContent = fmtUSD(totalUSD);
-  document.getElementById('sum_byr').textContent = fmtBYR(totalBYR);
+  
+  // В производственной смете цены в BYN, конвертируем в USD делением
+  // В оптовой смете цены в USD, конвертируем в BYN умножением
+  if (isProduction) {
+    const totalUSD = total / getRate();
+    document.getElementById('sum_usd').textContent = fmtUSD(totalUSD);
+    document.getElementById('sum_byr').textContent = fmtBYR(total);
+  } else {
+    const totalBYR = total * getRate();
+    document.getElementById('sum_usd').textContent = fmtUSD(total);
+    document.getElementById('sum_byr').textContent = fmtBYR(totalBYR);
+  }
 
   // Update markup/discount display
   const markupEl = document.getElementById('markup_val');
@@ -695,7 +709,7 @@ function updateSummary() {
   if (discountEl) discountEl.value = state.discount;
 
   // Category breakdown
-  renderCategoryBreakdown(subtotalUSD, totalUSD);
+  renderCategoryBreakdown(subtotal, total);
 }
 
 function renderCategoryBreakdown(subtotal, total) {
@@ -705,6 +719,8 @@ function renderCategoryBreakdown(subtotal, total) {
     return;
   }
 
+  const isProduction = state.currentMode === 'production';
+
   const cats = {
     'Стела': 0, 'Надгробка': 0, 'Подставка': 0, 'Цветник': 0,
     'Столб/Пролёт': 0, 'Худ. работа': 0, 'Полировка': 0,
@@ -712,7 +728,7 @@ function renderCategoryBreakdown(subtotal, total) {
   };
 
   state.cart.forEach(item => {
-    const v = item.price * (item.qty || 1) * (item.unit === 'м.п.' ? (item.meters || 1) : 1);
+    const v = item.price * (item.qty || 1) * (item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' ? (item.meters || 1) : 1);
     if (item.name.startsWith('Стела')) cats['Стела'] += v;
     else if (item.name.startsWith('Надгробка')) cats['Надгробка'] += v;
     else if (item.name.startsWith('Подставка')) cats['Подставка'] += v;
@@ -729,17 +745,20 @@ function renderCategoryBreakdown(subtotal, total) {
   const adj = 1 + (state.markup - state.discount) / 100;
   const rows = Object.entries(cats)
     .filter(([, v]) => v > 0)
-    .map(([cat, v]) => `
+    .map(([cat, v]) => {
+      const adjustedValue = v * adj;
+      const priceDisplay = isProduction ? fmtBYR(adjustedValue) : fmtUSD(adjustedValue);
+      return `
       <div class="flex justify-between text-sm py-1 border-b" style="border-color: var(--border);">
         <span style="color: var(--text-light);">${cat}</span>
-        <span style="color: var(--text);">${fmtUSD(v * adj)}</span>
+        <span style="color: var(--text);">${priceDisplay}</span>
       </div>
-    `).join('');
+    `}).join('');
 
   const adjLine = adj !== 1 ? `
     <div class="flex justify-between text-sm py-1" style="color: var(--text-light);">
       <span>${state.markup > 0 ? `Наценка +${state.markup}%` : `Скидка −${state.discount}%`}</span>
-      <span>${fmtUSD(total - subtotal)}</span>
+      <span>${isProduction ? fmtBYR(total - subtotal) : fmtUSD(total - subtotal)}</span>
     </div>` : '';
 
   el.innerHTML = rows + adjLine;
@@ -967,8 +986,12 @@ function addGraniteToCart() {
 // ═══ FORMS MODAL ═════════════════════════════════════════════════════════════
 
 function showFormSelector() {
-  document.getElementById('form_modal').classList.remove('hidden');
+  console.log('showFormSelector called');
+  const modal = document.getElementById('form_modal');
+  console.log('Modal element:', modal);
+  modal.classList.remove('hidden');
   renderForms();
+  console.log('Forms rendered');
 }
 
 function closeFormModal() {
@@ -976,11 +999,17 @@ function closeFormModal() {
 }
 
 function renderForms() {
+  console.log('renderForms called');
   const container = document.getElementById('forms_list');
-  const allForms = [...FORMS_V, ...FORMS_G];
+  console.log('Container element:', container);
   
-  container.innerHTML = allForms.map(form => `
-    <div class="item-card" style="cursor: pointer;" onclick='addFormToCart(${JSON.stringify(form)})'>
+  const allForms = [...FORMS_V, ...FORMS_G];
+  console.log('Total forms to render:', allForms.length);
+  console.log('First form:', allForms[0]);
+  console.log('Last form:', allForms[allForms.length - 1]);
+  
+  const html = allForms.map((form, index) => `
+    <div class="item-card form-item" style="cursor: pointer;" data-form-index="${index}">
       <div class="flex items-center gap-3">
         <img src="${form.image}" alt="${form.id}" class="form-preview" onerror="this.src='https://via.placeholder.com/60x80/1a1a1a/c9a961?text=${form.id}'">
         <div>
@@ -990,10 +1019,71 @@ function renderForms() {
       </div>
       <div class="flex items-center gap-3">
         <div class="item-price">${form.price}$</div>
-        <button class="item-add-btn" onclick='event.stopPropagation(); addFormToCart(${JSON.stringify(form)})'>+</button>
+        <button class="item-add-btn form-add-btn" data-form-index="${index}">+</button>
       </div>
     </div>
   `).join('');
+  
+  console.log('HTML length:', html.length);
+  container.innerHTML = html;
+  console.log('HTML set to container');
+  
+  // Добавляем обработчики событий после рендеринга
+  setTimeout(() => {
+    const formItems = document.querySelectorAll('.form-item');
+    console.log('Form items found:', formItems.length);
+    
+    formItems.forEach(item => {
+      item.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('form-add-btn')) {
+          const index = parseInt(this.getAttribute('data-form-index'));
+          console.log('Form item clicked, index:', index);
+          addFormToCartByIndex(index);
+        }
+      });
+    });
+    
+    const formBtns = document.querySelectorAll('.form-add-btn');
+    console.log('Form buttons found:', formBtns.length);
+    
+    formBtns.forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const index = parseInt(this.getAttribute('data-form-index'));
+        console.log('Form button clicked, index:', index);
+        addFormToCartByIndex(index);
+      });
+    });
+    
+    console.log('Event listeners attached');
+  }, 0);
+}
+
+function addFormToCartByIndex(index) {
+  console.log('addFormToCartByIndex called with index:', index);
+  const allForms = [...FORMS_V, ...FORMS_G];
+  console.log('Total forms:', allForms.length);
+  const form = allForms[index];
+  console.log('Selected form:', form);
+  if (!form) {
+    console.error('Form not found at index:', index);
+    return;
+  }
+  
+  const item = {
+    name: `Форма ${form.id} (${form.size})`,
+    unit: 'шт',
+    price: form.price,
+    id: Date.now(),
+    qty: 1
+  };
+  console.log('Adding item to cart:', item);
+  state.cart.push(item);
+  updateCartCount();
+  saveState();
+  renderCart();
+  closeFormModal();
+  console.log('Form added successfully');
 }
 
 function addFormToCart(form) {
@@ -1001,23 +1091,28 @@ function addFormToCart(form) {
     name: `Форма ${form.id} (${form.size})`,
     unit: 'шт',
     price: form.price,
-    id: Date.now()
+    id: Date.now(),
+    qty: 1
   };
   state.cart.push(item);
   updateCartCount();
   saveState();
+  renderCart();
   closeFormModal();
 }
 
 function filterForms() {
   const query = document.getElementById('form_search').value.toLowerCase();
-  const allForms = [...FORMS_V, ...FORMS_G].filter(f => 
+  const allForms = [...FORMS_V, ...FORMS_G];
+  const filteredForms = allForms.filter(f => 
     f.id.toLowerCase().includes(query)
   );
   
   const container = document.getElementById('forms_list');
-  container.innerHTML = allForms.map(form => `
-    <div class="item-card" style="cursor: pointer;" onclick='addFormToCart(${JSON.stringify(form)})'>
+  container.innerHTML = filteredForms.map(form => {
+    const originalIndex = allForms.indexOf(form);
+    return `
+    <div class="item-card form-item" style="cursor: pointer;" data-form-index="${originalIndex}">
       <div class="flex items-center gap-3">
         <img src="${form.image}" alt="${form.id}" class="form-preview" onerror="this.src='https://via.placeholder.com/60x80/1a1a1a/c9a961?text=${form.id}'">
         <div>
@@ -1027,10 +1122,30 @@ function filterForms() {
       </div>
       <div class="flex items-center gap-3">
         <div class="item-price">${form.price}$</div>
-        <button class="item-add-btn" onclick='event.stopPropagation(); addFormToCart(${JSON.stringify(form)})'>+</button>
+        <button class="item-add-btn form-add-btn" data-form-index="${originalIndex}">+</button>
       </div>
     </div>
-  `).join('');
+  `}).join('');
+  
+  // Добавляем обработчики событий после рендеринга
+  setTimeout(() => {
+    document.querySelectorAll('.form-item').forEach(item => {
+      item.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('form-add-btn')) {
+          const index = parseInt(this.getAttribute('data-form-index'));
+          addFormToCartByIndex(index);
+        }
+      });
+    });
+    
+    document.querySelectorAll('.form-add-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const index = parseInt(this.getAttribute('data-form-index'));
+        addFormToCartByIndex(index);
+      });
+    });
+  }, 0);
 }
 
 // ═══ EXPORT FUNCTIONS ════════════════════════════════════════════════════════
@@ -1308,17 +1423,19 @@ function renderBlagoustrojstvo(container) {
         qtyField = `<input type="number" min="1" value="1" id="qty_${item.name}" class="cat-qty-inp" style="width: 50px; font-size: 11px; padding: 2px;" title="Кол-во" placeholder="шт">`;
       }
       
+      // Цены в производственной смете уже в BYN
+      const priceBYN = item.price;
+      
       return `
       <tr class="cat-row blago-service-row" data-name="${item.name.toLowerCase()}">
         <td class="cat-row-name" style="font-size: 12px; padding: 4px 6px;">${item.name}</td>
         <td class="cat-row-unit" style="font-size: 11px; padding: 4px 4px;">${item.unit}</td>
         <td class="cat-row-price" style="padding: 4px 4px;">
-          <input type="number" value="${item.price}" min="0" step="0.5"
-            class="cat-price-inp" style="width: 50px; font-size: 11px; padding: 2px 4px;"
-            onchange="updateBlagoPrice('${item.name}', this.value)"
+          <input type="number" value="${priceBYN}" min="0" step="1"
+            class="cat-price-inp" style="width: 60px; font-size: 11px; padding: 2px 4px;"
+            onchange="updateBlagoPriceBYN('${item.name}', this.value)"
             title="Изменить цену">${item.note ? `<br><span style="font-size:9px;color:var(--text-light)">${item.note}</span>` : ''}
         </td>
-        <td class="cat-row-byr" style="font-size: 11px; padding: 4px 4px;">${(item.price * getRate()).toFixed(0)}р</td>
         <td class="cat-row-qty" style="padding: 4px 4px;">
           ${qtyField}
         </td>
@@ -1374,6 +1491,18 @@ function addBlagoToCart(item) {
   saveState();
   
   if (qtyInput) qtyInput.value = 1;
+}
+
+function updateBlagoPriceBYN(itemName, newPriceBYN) {
+  const priceBYN = parseFloat(newPriceBYN) || 0;
+  
+  for (const category in BLAGO_SERVICES) {
+    const item = BLAGO_SERVICES[category].find(i => i.name === itemName);
+    if (item) {
+      item.price = priceBYN;
+      break;
+    }
+  }
 }
 
 function setupBlagoScrollOpacity() {
@@ -1465,23 +1594,25 @@ function renderGranitItems() {
     const rows = services.map(item => {
       // Определяем какое поле показывать
       let qtyField = '';
-      if (item.unit === 'м/п' || item.unit === 'м2' || item.unit === 'м3') {
+      if (item.unit === 'м/п' || item.unit === 'м2' || item.unit === 'м3' || item.unit === 'у.е.') {
         qtyField = `<input type="number" min="0.1" step="0.1" value="1" id="qty_${item.name}" class="cat-qty-inp" style="width: 50px; font-size: 11px; padding: 2px;" title="${item.unit}" placeholder="${item.unit}">`;
       } else {
         qtyField = `<input type="number" min="1" value="1" id="qty_${item.name}" class="cat-qty-inp" style="width: 50px; font-size: 11px; padding: 2px;" title="Кол-во" placeholder="шт">`;
       }
+      
+      // Цены в производственной смете уже в BYN
+      const priceBYN = item.price;
       
       return `
       <tr class="cat-row granit-service-row" data-name="${item.name.toLowerCase()}">
         <td class="cat-row-name" style="font-size: 12px; padding: 4px 6px;">${item.name}</td>
         <td class="cat-row-unit" style="font-size: 11px; padding: 4px 4px;">${item.unit}</td>
         <td class="cat-row-price" style="padding: 4px 4px;">
-          <input type="number" value="${item.price}" min="0" step="0.5"
-            class="cat-price-inp" style="width: 50px; font-size: 11px; padding: 2px 4px;"
-            onchange="updateGranitPrice('${item.name}', this.value)"
+          <input type="number" value="${priceBYN}" min="0" step="1"
+            class="cat-price-inp" style="width: 60px; font-size: 11px; padding: 2px 4px;"
+            onchange="updateGranitPriceBYN('${item.name}', this.value)"
             title="Изменить цену">${item.note ? `<br><span style="font-size:9px;color:var(--text-light)">${item.note}</span>` : ''}
         </td>
-        <td class="cat-row-byr" style="font-size: 11px; padding: 4px 4px;">${(item.price * getRate()).toFixed(0)}р</td>
         <td class="cat-row-qty" style="padding: 4px 4px;">
           ${qtyField}
         </td>
@@ -1575,7 +1706,7 @@ function addGranitToCart(item) {
   let meters = 1;
   let finalQty = 1;
   
-  if (item.unit === 'м/п' || item.unit === 'м2' || item.unit === 'м3') {
+  if (item.unit === 'м/п' || item.unit === 'м2' || item.unit === 'м3' || item.unit === 'у.е.') {
     meters = qty;
     finalQty = 1;
   } else {
@@ -1588,6 +1719,18 @@ function addGranitToCart(item) {
   saveState();
   
   if (qtyInput) qtyInput.value = 1;
+}
+
+function updateGranitPriceBYN(itemName, newPriceBYN) {
+  const priceBYN = parseFloat(newPriceBYN) || 0;
+  
+  for (const category in BLAGO_SERVICES) {
+    const item = BLAGO_SERVICES[category].find(i => i.name === itemName);
+    if (item) {
+      item.price = priceBYN;
+      break;
+    }
+  }
 }
 
 function filterGranitItems() {

@@ -1007,10 +1007,7 @@ body.light-theme {
   color: var(--dark);
 }
 
-/* Скрыть старые item-card */
-.item-card {
-  display: none !important;
-}
+/* Item cards are used in forms modal and should be visible */
 
 @media (max-width: 600px) {
   .catalog-byr { display: none; }
@@ -1284,4 +1281,17 @@ body.light-theme {
 @media (max-width: 560px) {
   .cat-row-3 { grid-template-columns: 1fr; }
   .cat-row-byr { display: none; }
+}
+
+
+/* ═══ REMOVE NUMBER INPUT ARROWS ════════════════════════════════════════════*/
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
