@@ -605,7 +605,7 @@ function renderCart() {
   const isProduction = state.currentMode === 'production';
   
   container.innerHTML = state.cart.map(item => {
-    const itemTotal = item.price * (item.qty || 1) * (item.unit === 'м.п.' ? (item.meters || 1) : 1);
+    const itemTotal = item.price * (item.qty || 1) * (item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' || item.unit === 'м/п' || item.unit === 'у.е.' || item.unit === '1 км' ? (item.meters || 1) : 1);
     const imageHtml = item.image ? `<img src="${item.image}" alt="${item.name}" class="cart-item-image" onerror="this.style.display='none'">` : '';
     
     // Форматирование цены в зависимости от режима
@@ -628,22 +628,23 @@ function renderCart() {
         <div class="font-medium">${item.name}</div>
         <div class="text-sm" style="color: var(--text-light);">${priceDisplay}</div>
         <div class="flex flex-wrap gap-2 mt-2">
+          ${item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' || item.unit === 'м/п' || item.unit === 'у.е.' || item.unit === '1 км' ? `
           <div class="flex items-center gap-1">
             <label class="text-xs" style="color:var(--text-light)">Кол-во:</label>
-            <input type="number" min="1" value="${item.qty || 1}" 
-              class="w-16 px-2 py-1 text-sm border rounded cart-qty-input" 
-              onchange="updateCartItemQty(${item.id}, this.value, 'qty')">
-            <span class="text-xs" style="color:var(--text-light)">шт</span>
-          </div>
-          ${item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' ? `
-          <div class="flex items-center gap-1">
-            <label class="text-xs" style="color:var(--text-light)">Метры:</label>
             <input type="number" min="0.1" step="0.1" value="${item.meters || 1}" 
               class="w-16 px-2 py-1 text-sm border rounded cart-qty-input" 
               onchange="updateCartItemQty(${item.id}, this.value, 'meters')">
             <span class="text-xs" style="color:var(--text-light)">${item.unit}</span>
           </div>
-          ` : ''}
+          ` : `
+          <div class="flex items-center gap-1">
+            <label class="text-xs" style="color:var(--text-light)">Кол-во:</label>
+            <input type="number" min="1" value="${item.qty || 1}" 
+              class="w-16 px-2 py-1 text-sm border rounded cart-qty-input" 
+              onchange="updateCartItemQty(${item.id}, this.value, 'qty')">
+            <span class="text-xs" style="color:var(--text-light)">${item.unit}</span>
+          </div>
+          `}
         </div>
         <input type="text" placeholder="Примечание к позиции..." value="${item.note || ''}"
           class="mt-2 w-full px-2 py-1 text-xs border rounded cart-note-input"
@@ -680,7 +681,7 @@ function updateSummary() {
   const isProduction = state.currentMode === 'production';
   
   const subtotal = state.cart.reduce((sum, item) => {
-    const itemTotal = item.price * (item.qty || 1) * (item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' ? (item.meters || 1) : 1);
+    const itemTotal = item.price * (item.qty || 1) * (item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' || item.unit === 'м/п' || item.unit === 'у.е.' || item.unit === '1 км' ? (item.meters || 1) : 1);
     return sum + itemTotal;
   }, 0);
 
@@ -728,7 +729,7 @@ function renderCategoryBreakdown(subtotal, total) {
   };
 
   state.cart.forEach(item => {
-    const v = item.price * (item.qty || 1) * (item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' ? (item.meters || 1) : 1);
+    const v = item.price * (item.qty || 1) * (item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' || item.unit === 'м/п' || item.unit === 'у.е.' || item.unit === '1 км' ? (item.meters || 1) : 1);
     if (item.name.startsWith('Стела')) cats['Стела'] += v;
     else if (item.name.startsWith('Надгробка')) cats['Надгробка'] += v;
     else if (item.name.startsWith('Подставка')) cats['Подставка'] += v;
@@ -835,7 +836,7 @@ function saveEstimate() {
 
   const name = document.getElementById('client_name').value || 'Без имени';
   const totalUSD = state.cart.reduce((sum, item) => {
-    return sum + item.price * (item.qty || 1) * (item.unit === 'м.п.' ? (item.meters || 1) : 1);
+    return sum + item.price * (item.qty || 1) * (item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' || item.unit === 'м/п' || item.unit === 'у.е.' || item.unit === '1 км' ? (item.meters || 1) : 1);
   }, 0) * (1 + (state.markup - state.discount) / 100);
 
   const estimate = {
@@ -1157,7 +1158,7 @@ function buildEstimateText() {
   const orderNote = document.getElementById('order_note').value || '';
   
   const totalUSD = state.cart.reduce((sum, item) => {
-    const itemTotal = item.price * (item.qty || 1) * (item.unit === 'м.п.' ? (item.meters || 1) : 1);
+    const itemTotal = item.price * (item.qty || 1) * (item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' || item.unit === 'м/п' || item.unit === 'у.е.' || item.unit === '1 км' ? (item.meters || 1) : 1);
     return sum + itemTotal;
   }, 0);
   const totalBYR = usdToBYR(totalUSD);
@@ -1178,10 +1179,11 @@ function buildEstimateText() {
 
 ${state.cart.map((item, i) => {
   const qty = item.qty || 1;
-  const meters = item.unit === 'м.п.' ? (item.meters || 1) : 1;
+  const isMetric = item.unit === 'м.п.' || item.unit === 'м2' || item.unit === 'м3' || item.unit === 'м/п' || item.unit === 'у.е.' || item.unit === '1 км';
+  const meters = isMetric ? (item.meters || 1) : 1;
   const itemTotal = item.price * qty * meters;
-  const qtyStr = qty > 1 ? ` × ${qty} шт` : '';
-  const metersStr = item.unit === 'м.п.' && meters > 1 ? ` × ${meters} м.п.` : '';
+  const qtyStr = !isMetric && qty > 1 ? ` × ${qty} ${item.unit}` : '';
+  const metersStr = isMetric && meters > 1 ? ` × ${meters} ${item.unit}` : '';
   return `${i+1}. ${item.name}${qtyStr}${metersStr} — ${itemTotal.toFixed(2)}$`;
 }).join('\n')}
 
