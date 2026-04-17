@@ -51,6 +51,9 @@
       <button id="tab_catalog" onclick="switchTab('catalog')" class="main-tab active">
         📋 КАТАЛОГ
       </button>
+      <button id="tab_granit" onclick="switchTab('granit')" class="main-tab">
+        💎 ГРАНИТ
+      </button>
       <button id="tab_estimate" onclick="switchTab('estimate')" class="main-tab">
         🛒 СМЕТА <span id="cart_count" class="cart-badge">0</span>
       </button>
@@ -153,6 +156,19 @@
       </button>
     </div>
   </div>
+
+</div>
+
+<!-- Granit View -->
+<div id="granit_view" class="container mx-auto px-3 py-4 hidden">
+  
+  <!-- Search -->
+  <div class="mb-3">
+    <input type="text" id="granit_search" placeholder="🔍 Поиск по названию..." class="w-full px-3 py-2 border rounded text-sm" oninput="filterGranitItems()" style="background: var(--dark-light); color: var(--text); border-color: var(--border);">
+  </div>
+
+  <!-- Granit Items List -->
+  <div id="granit_items_list" class="space-y-2"></div>
 
 </div>
 

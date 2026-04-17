@@ -243,6 +243,8 @@ function saveState() {
     localStorage.setItem('belgranit_discount', state.discount);
     localStorage.setItem('belgranit_theme', state.darkMode ? 'dark' : 'light');
     localStorage.setItem('belgranit_estimates', JSON.stringify(state.savedEstimates));
+    localStorage.setItem('belgranit_mode', state.currentMode);
+    localStorage.setItem('belgranit_tab', state.currentTab);
   } catch (e) {}
 }
 
@@ -255,6 +257,10 @@ function loadState() {
     state.darkMode = localStorage.getItem('belgranit_theme') !== 'light';
     const savedEst = localStorage.getItem('belgranit_estimates');
     if (savedEst) state.savedEstimates = JSON.parse(savedEst);
+    
+    // Загружаем сохраненный режим и вкладку
+    state.currentMode = localStorage.getItem('belgranit_mode') || 'wholesale';
+    state.currentTab = localStorage.getItem('belgranit_tab') || 'catalog';
   } catch (e) {}
 }
 
@@ -262,6 +268,7 @@ function loadState() {
 
 function switchMode(mode) {
   state.currentMode = mode;
+  saveState(); // Сохраняем режим
   
   document.getElementById('mode_wholesale').classList.toggle('active', mode === 'wholesale');
   document.getElementById('mode_production').classList.toggle('active', mode === 'production');
@@ -272,9 +279,36 @@ function switchMode(mode) {
     graniteCalc.classList.toggle('hidden', mode === 'production');
   }
   
+  // Hide/show category tabs and form selector in production mode
+  const catGrid = document.querySelector('.cat-grid-sticky');
+  if (catGrid) catGrid.classList.toggle('hidden', mode === 'production');
+  
+  const formSelector = document.querySelector('.mb-3.text-center');
+  if (formSelector) formSelector.classList.toggle('hidden', mode === 'production');
+  
+  // Hide/show tabs based on mode
+  const tabCatalog = document.getElementById('tab_catalog');
+  const tabGranit = document.getElementById('tab_granit');
+  
+  if (mode === 'wholesale') {
+    // В оптовом режиме показываем только КАТАЛОГ и СМЕТА
+    tabCatalog.textContent = '📋 КАТАЛОГ';
+    tabGranit.style.display = 'none';
+    // Переключаемся на каталог если были на гранит
+    if (state.currentTab === 'granit') {
+      switchTab('catalog');
+    }
+  } else {
+    // В производственном режиме показываем БЛАГОУСТРОЙСТВО, ГРАНИТ и СМЕТА
+    tabCatalog.textContent = '📋 БЛАГОУСТРОЙСТВО';
+    tabGranit.style.display = 'block';
+  }
+  
   // Update UI based on mode
   if (state.currentTab === 'catalog') {
     renderItems();
+  } else if (state.currentTab === 'granit') {
+    renderGranitItems();
   } else if (state.currentTab === 'estimate') {
     renderCart();
   }
@@ -282,14 +316,21 @@ function switchMode(mode) {
 
 function switchTab(tab) {
   state.currentTab = tab;
+  saveState(); // Сохраняем вкладку
   
   document.getElementById('tab_catalog').classList.toggle('active', tab === 'catalog');
+  document.getElementById('tab_granit').classList.toggle('active', tab === 'granit');
   document.getElementById('tab_estimate').classList.toggle('active', tab === 'estimate');
   
   document.getElementById('catalog_view').classList.toggle('hidden', tab !== 'catalog');
+  document.getElementById('granit_view').classList.toggle('hidden', tab !== 'granit');
   document.getElementById('estimate_view').classList.toggle('hidden', tab !== 'estimate');
   
-  if (tab === 'estimate') {
+  if (tab === 'catalog') {
+    renderItems();
+  } else if (tab === 'granit') {
+    renderGranitItems();
+  } else if (tab === 'estimate') {
     renderCart();
   }
 }
@@ -312,7 +353,7 @@ function renderItems() {
   const container = document.getElementById('items_list');
 
   if (state.currentMode === 'production') {
-    container.innerHTML = '<div class="text-center py-8" style="color:var(--text-light)">Производственная смета будет заполнена позже</div>';
+    renderBlagoustrojstvo(container);
     return;
   }
 
@@ -508,7 +549,24 @@ function switchArtSubcategory(subcat) {
 
 function filterItems() {
   state.searchQuery = document.getElementById('search').value;
-  renderItems();
+  
+  if (state.currentMode === 'production') {
+    // Фильтрация для производственного каталога
+    const query = state.searchQuery.toLowerCase();
+    const rows = document.querySelectorAll('.blago-service-row');
+    
+    rows.forEach(row => {
+      const name = row.dataset.name || '';
+      if (query === '' || name.includes(query)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  } else {
+    // Фильтрация для оптового каталога
+    renderItems();
+  }
 }
 
 // ═══ CART FUNCTIONS ══════════════════════════════════════════════════════════
@@ -1070,12 +1128,489 @@ function shareWA() {
   window.open(`https://wa.me/?text=${encodeURIComponent(text.substring(0,400))}`, '_blank');
 }
 
+// ═══ БЛАГОУСТРОЙСТВО DATA (PRODUCTION MODE) ═════════════════════════════════
+
+const BLAGO_SERVICES = {
+  montazh: [
+    { name: 'Монтаж одинарного памятника', price: 150, unit: 'шт' },
+    { name: 'Монтаж одинарного памятника на фундаментный блок', price: 190, unit: 'шт' },
+    { name: 'Монтаж одинарного памятника на фунд. блок "косичка"', price: 250, unit: 'шт' },
+    { name: 'Монтаж гранитного памятника 110*55*8 и более', price: 200, unit: 'шт', note: 'от 200' },
+    { name: 'Монтаж двойного памятника', price: 200, unit: 'шт' },
+    { name: 'Монтаж двойного памятника на фундаментный блок', price: 250, unit: 'шт' },
+    { name: 'Монтаж блока фундаментного', price: 100, unit: 'шт' },
+    { name: 'Монтаж плиты бетонной 190*60*5 - 1 шт', price: 200, unit: 'шт' },
+    { name: 'Монтаж цветника', price: 60, unit: 'шт' },
+    { name: 'Монтаж плиты мозаичной цветочницы', price: 60, unit: 'шт' },
+    { name: 'Монтаж стола', price: 25, unit: 'шт' },
+    { name: 'Монтаж скамьи', price: 25, unit: 'шт' },
+    { name: 'Монтаж стола гранитного', price: 60, unit: 'шт' },
+    { name: 'Монтаж скамьи гранитной', price: 60, unit: 'шт' },
+    { name: 'Монтаж ограды в землю', price: 15, unit: 'м/п' },
+    { name: 'Монтаж ограды в борозду (гранит)', price: 15, unit: 'м/п' },
+    { name: 'Монтаж ура розанного', price: 30, unit: 'шт' },
+    { name: 'Монтаж гранитной ограды', price: 35, unit: 'м/п' },
+    { name: 'Монтаж креста металлического', price: 20, unit: 'шт' },
+    { name: 'Монтаж гранитной плиты толщиной 2 см С МАТЕРИАЛОМ (китай) на армированную плиту 20 см', price: 450, unit: 'м2' },
+    { name: 'Облицовка гранитной плитой 2 см С МАТЕРИАЛОМ (китай)', price: 680, unit: 'м2' },
+    { name: 'Монтаж гранитной плиты', price: 30, unit: 'шт' },
+    { name: 'Монтаж плиты надгробной', price: 30, unit: 'шт' },
+    { name: 'Монтаж медальона', price: 50, unit: 'шт' },
+    { name: 'Монтаж колышка', price: 20, unit: 'шт' },
+    { name: 'Монтаж вазы', price: 10, unit: 'шт' },
+    { name: 'Монтаж лампад', price: 10, unit: 'шт' },
+  ],
+  demontazh: [
+    { name: 'Демонтаж одинарного памятника гранитного', price: 80, unit: 'шт' },
+    { name: 'Демонтаж одинарного памятника бетонного', price: 100, unit: 'шт' },
+    { name: 'Демонтаж двойного памятника с двумя цветниками', price: 100, unit: 'шт' },
+    { name: 'Демонтаж цветника', price: 40, unit: 'шт' },
+    { name: 'Демонтаж старой ограды', price: 5, unit: 'м/п' },
+    { name: 'Демонтаж стола', price: 15, unit: 'шт' },
+    { name: 'Демонтаж старой плитки', price: 40, unit: 'м/п' },
+    { name: 'Демонтаж борозура', price: 10, unit: 'м/п' },
+    { name: 'Демонтаж крепа', price: 15, unit: 'шт' },
+    { name: 'Демонтаж скамьи', price: 15, unit: 'шт' },
+  ],
+  blago: [
+    { name: 'Покраска борозура розанного', price: 10, unit: 'м/п' },
+    { name: 'Стяжка', price: 60, unit: 'м2' },
+    { name: 'Стяжка армированная 5-6 см', price: 100, unit: 'м2' },
+    { name: 'Плитка бетонная 30 см', price: 150, unit: 'м2' },
+    { name: 'Плитка бетонная 30*30 с укладкой на армированную стяжку', price: 220, unit: 'м2' },
+    { name: 'Плитка бетонная МОЗАИЧНАЯ цветная 30*30 с укладкой на армированную стяжку', price: 250, unit: 'м2' },
+    { name: 'Плитка керамогранитная с укладкой на армированную стяжку', price: 320, unit: 'м2' },
+    { name: 'Плитка керамогранитная плиточной', price: 230, unit: 'м2' },
+    { name: 'Облицовка цера', price: 85, unit: 'м/п' },
+    { name: 'Бессерный блок с установкой плиточной', price: 128, unit: 'м/п' },
+    { name: 'Бессерный блок с установкой', price: 50, unit: 'м/п' },
+    { name: 'Борзур бетонный с монтажом', price: 60, unit: 'м/п' },
+    { name: 'Борзур бетонный цветной с монтажом', price: 180, unit: 'м/п' },
+    { name: 'Армированный поясок 40 см', price: 96, unit: 'м/п' },
+    { name: 'Армированный поясок 20 см', price: 45, unit: 'м/п' },
+    { name: 'Армированный поясок в землю', price: 45, unit: 'дог.' },
+    { name: 'Сварочные работы', price: 20, unit: 'м/п', note: 'от 20' },
+    { name: 'Покраска ограды в 2 слоя', price: 30, unit: 'дог.' },
+    { name: 'Перевозка материалов более 30м', price: 30, unit: 'дог.' },
+    { name: 'Выборка грунта', price: 30, unit: 'м2' },
+    { name: 'Доставка изделия на район', price: 1.5, unit: '1 км' },
+    { name: 'Переколпировка на гранитной стандарт', price: 60, unit: 'шт' },
+    { name: 'Плита бетонна 190*60*5', price: 130, unit: 'шт' },
+    { name: 'Укладка плитки керамогранитной ЗАКАЭЧИКА на арм.стяжку', price: 220, unit: 'м2' },
+    { name: 'Песок, засыпка одного свободного места', price: 100, unit: 'шт' },
+    { name: 'Блок фундаментный', price: 85, unit: '1 шт' },
+    { name: 'Блок фундаментный "косичка"', price: 140, unit: '1 шт' },
+    { name: 'Засыпка щебнем цветника -1 мешок', price: 30, unit: '1 меш.' },
+    { name: 'Засыпка щебнем цветника, белым мрамором -1 мешок', price: 40, unit: '1 меш.' },
+    { name: 'Щебень цветной', price: 15, unit: '1 меш.' },
+    { name: 'Щебень цветной, белый мрамор', price: 20, unit: '1 меш.' },
+    { name: 'Плита бетонная мозаичная 2,3*1,5 м благоустройства с монтажом', price: 850, unit: '1 шт' },
+    { name: 'Ковер (трава)', price: 110, unit: 'м2' },
+  ],
+  granit_izdeliya: [
+    // Стелы
+    { name: 'Стела 2 см', price: 624, unit: 'м2', granite: 'Габбро Мансур' },
+    { name: 'Стела 3 см', price: 960, unit: 'м2', granite: 'Габбро Мансур' },
+    { name: 'Стела 5 см', price: 1344, unit: 'м2', granite: 'Габбро Мансур' },
+    { name: 'Стела 8 см', price: 1824, unit: 'м2', granite: 'Габбро Мансур' },
+    { name: 'Стела 10 см', price: 2016, unit: 'м2', granite: 'Габбро Мансур' },
+    // Подставка
+    { name: 'Подставка', price: 24960, unit: 'м3', granite: 'Габбро Мансур' },
+    // Бордюр
+    { name: 'Бордюр 8*5', price: 129, unit: 'м.п.', granite: 'Габбро Мансур' },
+    { name: 'Бордюр 8*8', price: 199, unit: 'м.п.', granite: 'Габбро Мансур' },
+    // Столбики
+    { name: 'Столбики 10*10', price: 418, unit: 'м.п.', granite: 'Габбро Мансур' },
+    { name: 'Столбики 15*15', price: 726, unit: 'м.п.', granite: 'Габбро Мансур' },
+    // Цветник
+    { name: 'Цветник 8*5', price: 110, unit: 'м.п.', granite: 'Габбро Мансур' },
+    { name: 'Цветник 9*8', price: 180, unit: 'м.п.', granite: 'Габбро Мансур' },
+    { name: 'Цветник 10*5', price: 160, unit: 'м.п.', granite: 'Габбро Мансур' },
+    { name: 'Цветник 12*12', price: 0, unit: 'м.п.', granite: 'Габбро Мансур', note: 'договорная' },
+    { name: 'Цветник 15*15', price: 0, unit: 'м.п.', granite: 'Габбро Мансур', note: 'договорная' },
+    // Ваза
+    { name: 'Ваза 20*12*12', price: 162, unit: 'шт', granite: 'Габбро Мансур' },
+    { name: 'Ваза 25*12*12', price: 216, unit: 'шт', granite: 'Габбро Мансур' },
+    { name: 'Ваза 30*15*15', price: 297, unit: 'шт', granite: 'Габбро Мансур' },
+    // Шар с юбкой
+    { name: 'Шар с юбкой', price: 97, unit: 'шт', granite: 'Габбро Мансур' },
+    // Плита роль
+    { name: 'Плита роль 50*30*3', price: 170, unit: 'шт', granite: 'Габбро Мансур' },
+    { name: 'Плита роль 50*20*2', price: 120, unit: 'шт', granite: 'Габбро Мансур' },
+    { name: 'Плита роль 60*30*3', price: 230, unit: 'шт', granite: 'Габбро Мансур' },
+  ],
+  hudozh_raboty: [
+    { name: 'Портрет станок Ф А4', price: 90, unit: 'шт', note: 'Резка обычной формы 100*50*5' },
+    { name: 'Портрет резка Ф А4 Ф А3', price: 200, unit: 'шт', note: 'Резка обычной формы 120*60*8' },
+    { name: 'Портрет полуторс станок', price: 170, unit: 'шт', note: 'Резка формы 100*50*8' },
+    { name: 'Портрет полуторс резка', price: 330, unit: 'шт', note: 'Резка врыв' },
+    { name: 'Текст стандарт', price: 70, unit: 'шт', note: 'Резка креста 100*50*5' },
+    { name: 'Текст углубленный', price: 180, unit: 'шт', note: 'Резка креста 100*50*8', note2: 'от 180' },
+    { name: 'Текст углубл. на плите 120 и выше', price: 120, unit: 'шт', note: 'Резка креста 120*60*8', note2: 'от 200' },
+    { name: 'Худ. работа мелкие цветы гравир', price: 40, unit: 'шт', note: 'Врезка медальона в нишу', note2: 'от 40' },
+    { name: 'Пейзаж 1 Ф А4', price: 50, unit: 'шт', note: 'Рез плитка 5-10 см, м.п.', note2: 'от 350' },
+    { name: 'Полировка торца 5см+фаска', price: 25, unit: 'шт', note: 'Рез плитка 2-3 см, м.п.' },
+    { name: 'Полировка торца 8см+фаска', price: 35, unit: 'шт', note: 'Труба нержавейка 32 см, м.п.' },
+    { name: 'Полировка фаски на комплект', price: 50, unit: 'шт', note: 'Сетчик дополнительная' },
+    { name: 'Полировка фаски на комплект', price: 15, unit: 'шт', note: 'Сборка комплекса на производстве' },
+    { name: 'Буквы CAGGIATI шрифт CIRILLICO', price: 0, unit: 'шт', note: 'Нанесение несмываемого покрытия' },
+    { name: 'Буквы CAGGIATI шрифт MUNDIAL', price: 0, unit: 'шт' },
+  ],
+  bukvy_razmery: [
+    { name: 'Буквы 5 см', price: 6, unit: 'у.е.' },
+    { name: 'Буквы 3 см', price: 4, unit: 'у.е.' },
+    { name: 'Буквы знак любой', price: 3.5, unit: 'у.е.' },
+    { name: 'Монтаж любой буквы и знака', price: 1, unit: 'у.е.' },
+    { name: 'При длине материала 1,2 м или 0,7 м2 +10%', price: 0, unit: 'у.е.' },
+    { name: 'При длине материала 1,4 м или 0,9 м2 +20%', price: 0, unit: 'у.е.' },
+  ]
+};
+
+// ═══ БЛАГОУСТРОЙСТВО (PRODUCTION MODE) ═══════════════════════════════════════
+
+function renderBlagoustrojstvo(container) {
+  // Render floating calculator at the top
+  const calculator = `
+    <div class="card mb-4" id="blago_calculator" style="position: sticky; top: 80px; z-index: 10; transition: opacity 0.3s;">
+      <div class="card-body">
+        <div class="grid grid-cols-4 gap-3">
+          <div>
+            <label class="label text-xs">Длина (м)</label>
+            <input type="number" id="blago_length" value="0" step="0.1" min="0" class="input-field text-sm" oninput="calcBlagoMetrics()">
+          </div>
+          <div>
+            <label class="label text-xs">Ширина (м)</label>
+            <input type="number" id="blago_width" value="0" step="0.1" min="0" class="input-field text-sm" oninput="calcBlagoMetrics()">
+          </div>
+          <div class="text-center p-2 rounded" style="background: var(--dark-light);">
+            <div class="text-xs" style="color: var(--text-light);">Площадь</div>
+            <div class="text-xl font-bold" style="color: var(--primary);" id="blago_area">0.00</div>
+            <div class="text-xs" style="color: var(--text-light);">м²</div>
+          </div>
+          <div class="text-center p-2 rounded" style="background: var(--dark-light);">
+            <div class="text-xs" style="color: var(--text-light);">Периметр</div>
+            <div class="text-xl font-bold" style="color: var(--primary);" id="blago_perimeter">0.00</div>
+            <div class="text-xs" style="color: var(--text-light);">м/п</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Render all services in compact 3-column table format
+  const renderServiceGroup = (title, services) => {
+    const rows = services.map(item => {
+      // Определяем какое поле показывать
+      let qtyField = '';
+      if (item.unit === 'м/п' || item.unit === 'м2' || item.unit === '1 км') {
+        qtyField = `<input type="number" min="0.1" step="0.1" value="1" id="qty_${item.name}" class="cat-qty-inp" style="width: 50px; font-size: 11px; padding: 2px;" title="${item.unit}" placeholder="${item.unit}">`;
+      } else {
+        qtyField = `<input type="number" min="1" value="1" id="qty_${item.name}" class="cat-qty-inp" style="width: 50px; font-size: 11px; padding: 2px;" title="Кол-во" placeholder="шт">`;
+      }
+      
+      return `
+      <tr class="cat-row blago-service-row" data-name="${item.name.toLowerCase()}">
+        <td class="cat-row-name" style="font-size: 12px; padding: 4px 6px;">${item.name}</td>
+        <td class="cat-row-unit" style="font-size: 11px; padding: 4px 4px;">${item.unit}</td>
+        <td class="cat-row-price" style="padding: 4px 4px;">
+          <input type="number" value="${item.price}" min="0" step="0.5"
+            class="cat-price-inp" style="width: 50px; font-size: 11px; padding: 2px 4px;"
+            onchange="updateBlagoPrice('${item.name}', this.value)"
+            title="Изменить цену">${item.note ? `<br><span style="font-size:9px;color:var(--text-light)">${item.note}</span>` : ''}
+        </td>
+        <td class="cat-row-byr" style="font-size: 11px; padding: 4px 4px;">${(item.price * getRate()).toFixed(0)}р</td>
+        <td class="cat-row-qty" style="padding: 4px 4px;">
+          ${qtyField}
+        </td>
+        <td style="padding: 4px;"><button class="cat-add-btn" style="font-size: 14px; padding: 2px 8px;" onclick='addBlagoToCart(${JSON.stringify(item)})'>+</button></td>
+      </tr>
+    `}).join('');
+    
+    return `
+      <div class="cat-col">
+        <div class="cat-col-header" style="font-size: 13px; padding: 6px 8px;">${title}</div>
+        <table class="cat-col-table" style="font-size: 12px;">
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  container.innerHTML = calculator + `
+    <div class="cat-layout">
+      <div class="cat-row-3">
+        ${renderServiceGroup('МОНТАЖ', BLAGO_SERVICES.montazh)}
+        ${renderServiceGroup('ДЕМОНТАЖ', BLAGO_SERVICES.demontazh)}
+        ${renderServiceGroup('ПРОЧИЕ РАБОТЫ', BLAGO_SERVICES.blago)}
+      </div>
+    </div>
+  `;
+  
+  // Initialize calculator
+  setTimeout(() => {
+    calcBlagoMetrics();
+    setupBlagoScrollOpacity();
+  }, 100);
+}
+
+function addBlagoToCart(item) {
+  const qtyInput = document.getElementById(`qty_${item.name}`);
+  const qty = qtyInput ? parseFloat(qtyInput.value) || 1 : 1;
+  
+  // Для м/п, м2, км используем qty как meters, для остальных как штуки
+  let meters = 1;
+  let finalQty = 1;
+  
+  if (item.unit === 'м/п' || item.unit === 'м2' || item.unit === '1 км') {
+    meters = qty;
+    finalQty = 1;
+  } else {
+    finalQty = qty;
+    meters = 1;
+  }
+  
+  state.cart.push({ ...item, id: Date.now(), qty: finalQty, meters });
+  updateCartCount();
+  saveState();
+  
+  if (qtyInput) qtyInput.value = 1;
+}
+
+function setupBlagoScrollOpacity() {
+  const calc = document.getElementById('blago_calculator');
+  if (!calc) return;
+  
+  let lastScroll = window.scrollY;
+  
+  window.addEventListener('scroll', () => {
+    const currentScroll = window.scrollY;
+    
+    if (currentScroll > lastScroll && currentScroll > 100) {
+      // Scrolling down
+      calc.style.opacity = '0.7';
+    } else {
+      // Scrolling up or at top
+      calc.style.opacity = '1';
+    }
+    
+    lastScroll = currentScroll;
+  });
+  
+  // Reset opacity on hover
+  calc.addEventListener('mouseenter', () => {
+    calc.style.opacity = '1';
+  });
+}
+
+function calcBlagoMetrics() {
+  const length = parseFloat(document.getElementById('blago_length')?.value) || 0;
+  const width = parseFloat(document.getElementById('blago_width')?.value) || 0;
+  
+  const area = length * width;
+  const perimeter = 2 * (length + width);
+  
+  const areaEl = document.getElementById('blago_area');
+  const perimeterEl = document.getElementById('blago_perimeter');
+  
+  if (areaEl) areaEl.textContent = area.toFixed(2);
+  if (perimeterEl) perimeterEl.textContent = perimeter.toFixed(2);
+}
+
+function updateBlagoPrice(itemName, newPrice) {
+  const price = parseFloat(newPrice) || 0;
+  for (const category in BLAGO_SERVICES) {
+    const item = BLAGO_SERVICES[category].find(i => i.name === itemName);
+    if (item) {
+      item.price = price;
+      break;
+    }
+  }
+}
+
+// ═══ GRANIT TAB FUNCTIONS ═══════════════════════════════════════════════════
+
+function renderGranitItems() {
+  const container = document.getElementById('granit_items_list');
+  
+  // Render floating calculator at the top
+  const calculator = `
+    <div class="card mb-4" id="granit_calculator" style="position: sticky; top: 80px; z-index: 10; transition: opacity 0.3s;">
+      <div class="card-body">
+        <div class="grid grid-cols-4 gap-3">
+          <div>
+            <label class="label text-xs">Длина (м)</label>
+            <input type="number" id="granit_length" value="0" step="0.1" min="0" class="input-field text-sm" oninput="calcGranitMetrics()">
+          </div>
+          <div>
+            <label class="label text-xs">Ширина (м)</label>
+            <input type="number" id="granit_width" value="0" step="0.1" min="0" class="input-field text-sm" oninput="calcGranitMetrics()">
+          </div>
+          <div class="text-center p-2 rounded" style="background: var(--dark-light);">
+            <div class="text-xs" style="color: var(--text-light);">Площадь</div>
+            <div class="text-xl font-bold" style="color: var(--primary);" id="granit_area">0.00</div>
+            <div class="text-xs" style="color: var(--text-light);">м²</div>
+          </div>
+          <div class="text-center p-2 rounded" style="background: var(--dark-light);">
+            <div class="text-xs" style="color: var(--text-light);">Периметр</div>
+            <div class="text-xl font-bold" style="color: var(--primary);" id="granit_perimeter">0.00</div>
+            <div class="text-xs" style="color: var(--text-light);">м/п</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Render all granit services in compact 3-column table format
+  const renderServiceGroup = (title, services) => {
+    const rows = services.map(item => {
+      // Определяем какое поле показывать
+      let qtyField = '';
+      if (item.unit === 'м/п' || item.unit === 'м2' || item.unit === 'м3') {
+        qtyField = `<input type="number" min="0.1" step="0.1" value="1" id="qty_${item.name}" class="cat-qty-inp" style="width: 50px; font-size: 11px; padding: 2px;" title="${item.unit}" placeholder="${item.unit}">`;
+      } else {
+        qtyField = `<input type="number" min="1" value="1" id="qty_${item.name}" class="cat-qty-inp" style="width: 50px; font-size: 11px; padding: 2px;" title="Кол-во" placeholder="шт">`;
+      }
+      
+      return `
+      <tr class="cat-row granit-service-row" data-name="${item.name.toLowerCase()}">
+        <td class="cat-row-name" style="font-size: 12px; padding: 4px 6px;">${item.name}</td>
+        <td class="cat-row-unit" style="font-size: 11px; padding: 4px 4px;">${item.unit}</td>
+        <td class="cat-row-price" style="padding: 4px 4px;">
+          <input type="number" value="${item.price}" min="0" step="0.5"
+            class="cat-price-inp" style="width: 50px; font-size: 11px; padding: 2px 4px;"
+            onchange="updateGranitPrice('${item.name}', this.value)"
+            title="Изменить цену">${item.note ? `<br><span style="font-size:9px;color:var(--text-light)">${item.note}</span>` : ''}
+        </td>
+        <td class="cat-row-byr" style="font-size: 11px; padding: 4px 4px;">${(item.price * getRate()).toFixed(0)}р</td>
+        <td class="cat-row-qty" style="padding: 4px 4px;">
+          ${qtyField}
+        </td>
+        <td style="padding: 4px;"><button class="cat-add-btn" style="font-size: 14px; padding: 2px 8px;" onclick='addGranitToCart(${JSON.stringify(item)})'>+</button></td>
+      </tr>
+    `}).join('');
+    
+    return `
+      <div class="cat-col">
+        <div class="cat-col-header" style="font-size: 13px; padding: 6px 8px;">${title}</div>
+        <table class="cat-col-table" style="font-size: 12px;">
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  container.innerHTML = calculator + `
+    <div class="cat-layout">
+      <div class="cat-row-3">
+        ${renderServiceGroup('ГРАНИТНЫЕ ИЗДЕЛИЯ', BLAGO_SERVICES.granit_izdeliya)}
+        ${renderServiceGroup('ХУДОЖЕСТВЕННЫЕ РАБОТЫ', BLAGO_SERVICES.hudozh_raboty)}
+        ${renderServiceGroup('БУКВЫ И РАЗМЕРЫ', BLAGO_SERVICES.bukvy_razmery)}
+      </div>
+    </div>
+  `;
+  
+  // Initialize calculator
+  setTimeout(() => {
+    calcGranitMetrics();
+    setupGranitScrollOpacity();
+  }, 100);
+}
+
+function setupGranitScrollOpacity() {
+  const calc = document.getElementById('granit_calculator');
+  if (!calc) return;
+  
+  let lastScroll = window.scrollY;
+  
+  window.addEventListener('scroll', () => {
+    const currentScroll = window.scrollY;
+    
+    if (currentScroll > lastScroll && currentScroll > 100) {
+      // Scrolling down
+      calc.style.opacity = '0.7';
+    } else {
+      // Scrolling up or at top
+      calc.style.opacity = '1';
+    }
+    
+    lastScroll = currentScroll;
+  });
+  
+  // Reset opacity on hover
+  calc.addEventListener('mouseenter', () => {
+    calc.style.opacity = '1';
+  });
+}
+
+function calcGranitMetrics() {
+  const length = parseFloat(document.getElementById('granit_length')?.value) || 0;
+  const width = parseFloat(document.getElementById('granit_width')?.value) || 0;
+  
+  const area = length * width;
+  const perimeter = 2 * (length + width);
+  
+  const areaEl = document.getElementById('granit_area');
+  const perimeterEl = document.getElementById('granit_perimeter');
+  
+  if (areaEl) areaEl.textContent = area.toFixed(2);
+  if (perimeterEl) perimeterEl.textContent = perimeter.toFixed(2);
+}
+
+function updateGranitPrice(itemName, newPrice) {
+  const price = parseFloat(newPrice) || 0;
+  for (const category in BLAGO_SERVICES) {
+    const item = BLAGO_SERVICES[category].find(i => i.name === itemName);
+    if (item) {
+      item.price = price;
+      break;
+    }
+  }
+}
+
+function addGranitToCart(item) {
+  const qtyInput = document.getElementById(`qty_${item.name}`);
+  const qty = qtyInput ? parseFloat(qtyInput.value) || 1 : 1;
+  
+  // Для м/п, м2, м3 используем qty как meters, для остальных как штуки
+  let meters = 1;
+  let finalQty = 1;
+  
+  if (item.unit === 'м/п' || item.unit === 'м2' || item.unit === 'м3') {
+    meters = qty;
+    finalQty = 1;
+  } else {
+    finalQty = qty;
+    meters = 1;
+  }
+  
+  state.cart.push({ ...item, id: Date.now(), qty: finalQty, meters });
+  updateCartCount();
+  saveState();
+  
+  if (qtyInput) qtyInput.value = 1;
+}
+
+function filterGranitItems() {
+  const query = document.getElementById('granit_search').value.toLowerCase();
+  const rows = document.querySelectorAll('.granit-service-row');
+  
+  rows.forEach(row => {
+    const name = row.dataset.name || '';
+    if (query === '' || name.includes(query)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
 // ═══ INITIALIZATION ══════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
   loadState();
   updateCartCount();
-  renderItems();
+  switchMode(state.currentMode); // Восстанавливаем режим
+  switchTab(state.currentTab); // Восстанавливаем вкладку
   calcGranite();
   updateGraniteColors('mansurovsky');
   applyTheme();

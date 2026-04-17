@@ -599,6 +599,18 @@ header {
   .modal {
     display: none !important;
   }
+  
+  /* Скрываем информацию о заказчике при печати */
+  .card:has(h3:contains("Информация о заказчике")),
+  .card-header:has(h3:contains("Информация о заказчике")),
+  #client_name, #client_phone, #order_date, #order_note {
+    display: none !important;
+  }
+  
+  /* Скрываем весь блок с информацией о заказчике */
+  .lg\\:col-span-2 > .card:nth-child(2) {
+    display: none !important;
+  }
 
   /* Белый фон и чёрный текст */
   *, *::before, *::after {
