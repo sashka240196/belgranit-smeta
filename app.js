@@ -316,108 +316,106 @@ function renderItems() {
     return;
   }
 
-  if (state.currentCategory !== 'all' && state.searchQuery === '') {
-    // режим одной категории (при клике на таб)
-  }
-
-  const categories = [
-    { key: 'stele',     label: 'Стела',          items: KARELIA_STELE },
-    { key: 'gravestone',label: 'Надгробка',       items: KARELIA_GRAVESTONE },
-    { key: 'pedestal',  label: 'Подставка',       items: KARELIA_PEDESTAL },
-    { key: 'flowerbed', label: 'Цветник',         items: KARELIA_FLOWERBED },
-    { key: 'post',      label: 'Столб / Пролёт',  items: KARELIA_POST },
-    { key: 'polish',    label: 'Полировка',       items: POLISHING },
+  const allGroups = [
+    { key: 'stele',       label: 'Стела',                      items: KARELIA_STELE,               hasCustom: true },
+    { key: 'pedestal',    label: 'Подставка',                  items: KARELIA_PEDESTAL,             hasCustom: true },
+    { key: 'flowerbed',   label: 'Цветник',                    items: KARELIA_FLOWERBED,            hasCustom: true },
+    { key: 'gravestone',  label: 'Надгробка',                  items: KARELIA_GRAVESTONE,           hasCustom: true },
+    { key: 'post',        label: 'Столб / Пролёт',             items: KARELIA_POST,                 hasCustom: true },
+    { key: 'polish',      label: 'Полировка',                  items: POLISHING,                    hasCustom: false },
+    { key: 'art_stanok',  label: 'Худ. работа — Станок',       items: ART_WORK.stanok,              hasCustom: false },
+    { key: 'art_std',     label: 'Пескоструй Стандарт',        items: ART_WORK.peskostroy_standard, hasCustom: false },
+    { key: 'art_deep',    label: 'Пескоструй Углубленный',     items: ART_WORK.peskostroy_deep,     hasCustom: false },
   ];
 
-  // Художественные работы — добавляем как группы
-  const artGroups = [
-    { key: 'art_stanok',    label: 'Худ. работа — Станок',              items: ART_WORK.stanok },
-    { key: 'art_standard',  label: 'Худ. работа — Пескоструй Стандарт', items: ART_WORK.peskostroy_standard },
-    { key: 'art_deep',      label: 'Худ. работа — Пескоструй Углубл.',  items: ART_WORK.peskostroy_deep },
-  ];
+  // Фильтрация при поиске
+  let groups = allGroups.map(g => ({
+    ...g,
+    items: state.searchQuery
+      ? g.items.filter(i => i.name.toLowerCase().includes(state.searchQuery.toLowerCase()))
+      : g.items
+  })).filter(g => g.items.length > 0);
 
-  const allGroups = [...categories, ...artGroups];
+  // Функция рендера одной колонки-категории
+  function renderGroupCol(g) {
+    if (!g) return '<div></div>';
+    const rows = g.items.map(item => `
+      <tr class="cat-row">
+        <td class="cat-row-name">${item.name.replace(g.label.split(' ')[0] + ' ', '')}</td>
+        <td class="cat-row-unit">${item.unit}</td>
+        <td class="cat-row-price">
+          <input type="number" value="${item.price}" min="0" step="0.5"
+            class="cat-price-inp"
+            onchange="updateCatalogPrice('${item.name}', this.value)"
+            title="Изменить цену">$
+        </td>
+        <td class="cat-row-byr">${(item.price * getRate()).toFixed(0)}р</td>
+        <td class="cat-row-qty">
+          <input type="number" min="1" value="1" id="qty_${item.name}" class="cat-qty-inp" title="Кол-во">
+          ${item.unit === 'м.п.' ? `<input type="number" min="0.1" step="0.1" value="1" id="meters_${item.name}" class="cat-qty-inp" title="м.п.">` : ''}
+        </td>
+        <td><button class="cat-add-btn" onclick='addToCartWithQty(${JSON.stringify(item)})'>+</button></td>
+      </tr>
+    `).join('');
 
-  let html = '';
+    const customRow = (g.hasCustom && !state.searchQuery) ? `
+      <tr class="cat-row cat-custom-row">
+        <td class="cat-row-name" style="font-style:italic;color:var(--text-light)">Нестандарт</td>
+        <td class="cat-row-unit"></td>
+        <td class="cat-row-price">
+          <input type="number" id="custom_price_${g.key}" value="50" step="0.5" class="cat-price-inp" title="Цена $">$
+        </td>
+        <td></td>
+        <td class="cat-row-qty" style="gap:2px">
+          <input type="number" id="custom_h_${g.key}" value="100" class="cat-qty-inp" title="В">
+          <input type="number" id="custom_w_${g.key}" value="50"  class="cat-qty-inp" title="Ш">
+          <input type="number" id="custom_t_${g.key}" value="5"   class="cat-qty-inp" title="Т">
+        </td>
+        <td><button class="cat-add-btn" onclick="addCustomSizeFrom('${g.key}')">+</button></td>
+      </tr>
+    ` : '';
 
-  for (const group of allGroups) {
-    let items = group.items;
-
-    // Фильтр по поиску
-    if (state.searchQuery) {
-      items = items.filter(i => i.name.toLowerCase().includes(state.searchQuery.toLowerCase()));
-      if (!items.length) continue;
-    }
-
-    const showCustomSize = ['stele','gravestone','pedestal','flowerbed','post'].includes(group.key);
-    const hasCustom = showCustomSize && !state.searchQuery;
-
-    html += `
-      <div class="catalog-group" id="group_${group.key}">
-        <div class="catalog-group-header" onclick="toggleGroup('${group.key}')">
-          <span>${group.label}</span>
-          <span class="catalog-group-arrow" id="arrow_${group.key}">▾</span>
-        </div>
-        <div class="catalog-group-body" id="body_${group.key}">
-          <table class="catalog-table">
-            <tbody>
-              ${items.map(item => `
-              <tr class="catalog-row">
-                <td class="catalog-name">${item.name}</td>
-                <td class="catalog-unit">${item.unit}</td>
-                <td class="catalog-price-cell">
-                  <input type="number" value="${item.price}" min="0" step="0.5"
-                    class="catalog-price-input"
-                    onchange="updateCatalogPrice('${item.name}', this.value)"
-                    title="Изменить цену">
-                  <span class="catalog-currency">$</span>
-                </td>
-                <td class="catalog-byr">${(item.price * getRate()).toFixed(0)}р</td>
-                <td class="catalog-qty-cell">
-                  <input type="number" min="1" value="1" id="qty_${item.name}" class="catalog-qty-input">
-                  ${item.unit === 'м.п.' ? `<input type="number" min="0.1" step="0.1" value="1" id="meters_${item.name}" class="catalog-qty-input" title="м.п.">` : ''}
-                </td>
-                <td>
-                  <button class="catalog-add-btn" onclick='addToCartWithQty(${JSON.stringify(item)})'>+</button>
-                </td>
-              </tr>
-              `).join('')}
-              ${hasCustom ? `
-              <tr class="catalog-row catalog-custom-row">
-                <td colspan="2" class="catalog-name" style="color:var(--text-light);font-style:italic">Нестандартный размер</td>
-                <td class="catalog-price-cell">
-                  <input type="number" id="custom_price" value="50" step="0.5" class="catalog-price-input">
-                  <span class="catalog-currency">$</span>
-                </td>
-                <td></td>
-                <td class="catalog-qty-cell">
-                  <input type="text" id="custom_h" value="100" class="catalog-qty-input" title="Высота">
-                  <input type="text" id="custom_w" value="50" class="catalog-qty-input" title="Ширина">
-                  <input type="text" id="custom_t" value="5" class="catalog-qty-input" title="Толщина">
-                </td>
-                <td>
-                  <button class="catalog-add-btn" onclick="addCustomSize()">+</button>
-                </td>
-              </tr>
-              ` : ''}
-            </tbody>
-          </table>
-        </div>
+    return `
+      <div class="cat-col">
+        <div class="cat-col-header">${g.label}</div>
+        <table class="cat-col-table">
+          <tbody>${rows}${customRow}</tbody>
+        </table>
       </div>
     `;
   }
 
+  // Разбиваем на строки по 3 колонки
+  let html = '<div class="cat-layout">';
+  for (let i = 0; i < groups.length; i += 3) {
+    html += '<div class="cat-row-3">';
+    html += renderGroupCol(groups[i]);
+    html += renderGroupCol(groups[i+1]);
+    html += renderGroupCol(groups[i+2]);
+    html += '</div>';
+  }
+  html += '</div>';
+
   container.innerHTML = html || '<div class="text-center py-6" style="color:var(--text-light)">Ничего не найдено</div>';
 }
 
-function toggleGroup(key) {
-  const body = document.getElementById('body_' + key);
-  const arrow = document.getElementById('arrow_' + key);
-  if (!body) return;
-  const isOpen = body.style.display !== 'none';
-  body.style.display = isOpen ? 'none' : 'block';
-  arrow.textContent = isOpen ? '▸' : '▾';
+function addCustomSizeFrom(groupKey) {
+  const h = document.getElementById('custom_h_' + groupKey)?.value || 100;
+  const w = document.getElementById('custom_w_' + groupKey)?.value || 50;
+  const t = document.getElementById('custom_t_' + groupKey)?.value || 5;
+  const price = parseFloat(document.getElementById('custom_price_' + groupKey)?.value) || 0;
+  const labelMap = { stele:'Стела', pedestal:'Подставка', flowerbed:'Цветник', gravestone:'Надгробка', post:'Столб/Пролёт' };
+  const item = { name:`${labelMap[groupKey]||groupKey} (нестандарт) ${h}×${w}×${t}`, unit:'шт', price, id:Date.now(), qty:1, meters:1 };
+  state.cart.push(item);
+  updateCartCount();
+  saveState();
 }
+
+function addCustomSize() {
+  addCustomSizeFrom(state.currentCategory);
+}
+
+function toggleGroup(key) {}
 
 function switchCategory(cat) {
   state.currentCategory = cat;
@@ -425,54 +423,28 @@ function switchCategory(cat) {
     btn.classList.toggle('active', btn.dataset.cat === cat);
   });
   renderItems();
-  // Прокрутка к нужной группе
-  if (cat !== 'all') {
-    const map = { art: 'art_stanok' };
-    const key = map[cat] || cat;
-    setTimeout(() => {
-      const el = document.getElementById('group_' + key);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
-  }
+  const map = { art:'art_stanok' };
+  const key = map[cat] || cat;
+  setTimeout(() => {
+    const el = document.querySelector('.cat-col-header');
+    const allHeaders = document.querySelectorAll('.cat-col-header');
+    allHeaders.forEach(h => {
+      if (h.textContent.toLowerCase().includes(key.replace('_', ' '))) {
+        h.scrollIntoView({ behavior:'smooth', block:'start' });
+      }
+    });
+  }, 50);
 }
 
 function updateCatalogPrice(itemName, newPrice) {
   const price = parseFloat(newPrice) || 0;
-  const allArrays = [KARELIA_STELE, KARELIA_GRAVESTONE, KARELIA_PEDESTAL, 
+  const allArrays = [KARELIA_STELE, KARELIA_GRAVESTONE, KARELIA_PEDESTAL,
                      KARELIA_FLOWERBED, KARELIA_POST, POLISHING,
                      ...Object.values(ART_WORK)];
   for (const arr of allArrays) {
     const item = arr.find(i => i.name === itemName);
     if (item) { item.price = price; break; }
   }
-}
-
-function addCustomSize() {
-  const h = document.getElementById('custom_h').value;
-  const w = document.getElementById('custom_w').value;
-  const t = document.getElementById('custom_t').value;
-  const price = parseFloat(document.getElementById('custom_price').value) || 0;
-  
-  const categoryNames = {
-    stele: 'Стела',
-    pedestal: 'Подставка',
-    flowerbed: 'Цветник',
-    gravestone: 'Надгробка',
-    post: 'Столб/Пролёт'
-  };
-  
-  const item = {
-    name: `${categoryNames[state.currentCategory]} (нестандарт) ${h}×${w}×${t}`,
-    unit: 'шт',
-    price: price,
-    id: Date.now(),
-    qty: 1,
-    meters: 1
-  };
-  
-  state.cart.push(item);
-  updateCartCount();
-  saveState();
 }
 
 function addToCartWithQty(item) {

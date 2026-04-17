@@ -66,15 +66,17 @@
     <input type="text" id="search" placeholder="🔍 Поиск по названию..." class="w-full px-3 py-2 border rounded text-sm" oninput="filterItems()" style="background: var(--dark-light); color: var(--text); border-color: var(--border);">
   </div>
 
-  <!-- Category Tabs — быстрый переход к разделу -->
-  <div class="category-tabs mb-4">
-    <button class="cat-tab active" data-cat="stele"     onclick="switchCategory('stele')">Стела</button>
-    <button class="cat-tab" data-cat="pedestal"         onclick="switchCategory('pedestal')">Подставка</button>
-    <button class="cat-tab" data-cat="flowerbed"        onclick="switchCategory('flowerbed')">Цветник</button>
-    <button class="cat-tab" data-cat="gravestone"       onclick="switchCategory('gravestone')">Надгробка</button>
-    <button class="cat-tab" data-cat="art"              onclick="switchCategory('art')">Худ. работа</button>
-    <button class="cat-tab" data-cat="post"             onclick="switchCategory('post')">Столб, пролёт</button>
-    <button class="cat-tab" data-cat="polish"           onclick="switchCategory('polish')">Полировка</button>
+  <!-- Category Tabs — sticky при скролле -->
+  <div class="cat-grid-sticky">
+    <div class="category-tabs">
+      <button class="cat-tab active" data-cat="stele"      onclick="switchCategory('stele')">Стела</button>
+      <button class="cat-tab"        data-cat="pedestal"   onclick="switchCategory('pedestal')">Подставка</button>
+      <button class="cat-tab"        data-cat="flowerbed"  onclick="switchCategory('flowerbed')">Цветник</button>
+      <button class="cat-tab"        data-cat="gravestone" onclick="switchCategory('gravestone')">Надгробка</button>
+      <button class="cat-tab"        data-cat="art"        onclick="switchCategory('art')">Худ. работа</button>
+      <button class="cat-tab"        data-cat="post"       onclick="switchCategory('post')">Столб, пролёт</button>
+      <button class="cat-tab"        data-cat="polish"     onclick="switchCategory('polish')">Полировка</button>
+    </div>
   </div>
 
   <!-- Form Selector -->
