@@ -391,17 +391,16 @@ function renderItems() {
     const rows = g.items.map(item => `
       <tr class="cat-row">
         <td class="cat-row-name">${item.name.replace(g.label.split(' ')[0] + ' ', '')}</td>
-        <td class="cat-row-unit">${item.unit}</td>
         <td class="cat-row-price">
           <input type="number" value="${item.price}" min="0" step="0.5"
             class="cat-price-inp"
             onchange="updateCatalogPrice('${item.name}', this.value)"
-            title="Изменить цену">$
+            title="Изменить цену">$&nbsp;<span class="cat-row-byr-inline">${(item.price * getRate()).toFixed(0)}р</span>
         </td>
-        <td class="cat-row-byr">${(item.price * getRate()).toFixed(0)}р</td>
         <td class="cat-row-qty">
           <input type="number" min="1" value="1" id="qty_${item.name}" class="cat-qty-inp" title="Кол-во">
           ${item.unit === 'м.п.' ? `<input type="number" min="0.1" step="0.1" value="1" id="meters_${item.name}" class="cat-qty-inp" title="м.п.">` : ''}
+          <span class="cat-unit-label">${item.unit}</span>
         </td>
         <td><button class="cat-add-btn" onclick='addToCartWithQty(${JSON.stringify(item)})'>+</button></td>
       </tr>
@@ -410,15 +409,13 @@ function renderItems() {
     const customRow = (g.hasCustom && !state.searchQuery) ? `
       <tr class="cat-row cat-custom-row">
         <td class="cat-row-name" style="font-style:italic;color:var(--text-light)">Нестандарт</td>
-        <td class="cat-row-unit"></td>
         <td class="cat-row-price">
           <input type="number" id="custom_price_${g.key}" value="50" step="0.5" class="cat-price-inp" title="Цена $">$
         </td>
-        <td></td>
         <td class="cat-row-qty" style="gap:2px">
-          <input type="number" id="custom_h_${g.key}" value="100" class="cat-qty-inp" title="В">
-          <input type="number" id="custom_w_${g.key}" value="50"  class="cat-qty-inp" title="Ш">
-          <input type="number" id="custom_t_${g.key}" value="5"   class="cat-qty-inp" title="Т">
+          <input type="number" id="custom_h_${g.key}" value="100" class="cat-qty-inp" title="В(см)">
+          <input type="number" id="custom_w_${g.key}" value="50"  class="cat-qty-inp" title="Ш(см)">
+          <input type="number" id="custom_t_${g.key}" value="5"   class="cat-qty-inp" title="Т(см)">
         </td>
         <td><button class="cat-add-btn" onclick="addCustomSizeFrom('${g.key}')">+</button></td>
       </tr>
