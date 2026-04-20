@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>БЕЛГРАНИТ — Админ панель</title>
+<script src="tailwind.min.js"></script>
+<style>
+:root{--p:#c9a961;--d:#1a1a1a;--c:#1e1e1e;--b:#333;--t:#e8e8e8;--tl:#a0a0a0;--ib:#f5f5f5;--it:#2c2c2c}
+body{background:var(--d);color:var(--t);font-family:Segoe UI,Arial,sans-serif;margin:0}
+.login-wrap{max-width:360px;margin:80px auto;background:var(--c);border:1px solid var(--b);border-radius:12px;padding:32px}
+.inp{width:100%;padding:10px 14px;background:var(--ib);color:var(--it);border:1px solid #ccc;border-radius:8px;font-size:14px;margin-bottom:12px;box-sizing:border-box}
+.btn{width:100%;padding:12px;background:var(--p);color:#1a1a1a;border:none;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer}
+.btn-sm{padding:5px 14px;background:var(--p);color:#1a1a1a;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-sec{padding:8px 16px;background:transparent;color:var(--p);border:1px solid var(--p);border-radius:8px;font-size:13px;cursor:pointer}
+.btn-sec:hover{background:var(--p);color:#1a1a1a}
+.btn-del{padding:3px 9px;background:transparent;color:#e74c3c;border:1px solid #e74c3c;border-radius:5px;font-size:11px;cursor:pointer}
+.btn-del:hover{background:#e74c3c;color:#fff}
+.hdr{background:#111;border-bottom:2px solid var(--p);padding:10px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+.section{background:var(--c);border:1px solid var(--b);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.sec-hd{background:#2a2a2a;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--p);cursor:pointer;user-select:none}
+.sec-title{font-size:12px;font-weight:700;color:var(--p);text-transform:uppercase;letter-spacing:.5px}
+.badge{background:var(--p);color:#1a1a1a;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:8px}
+table{width:100%;border-collapse:collapse}
+th{background:#252525;padding:6px 10px;font-size:11px;color:var(--tl);text-align:left;border-bottom:1px solid var(--b)}
+td{padding:4px 8px;font-size:12px;border-bottom:1px solid #252525;vertical-align:middle}
+tr:hover td{background:#252525}
+.td-inp{padding:3px 6px;background:var(--ib);color:var(--it);border:1px solid #ccc;border-radius:4px;font-size:12px}
+.td-name{width:100%}
+.td-price{width:70px;text-align:right}
+.td-unit{width:55px}
+.alert-ok{background:#1a3a1a;color:#4caf50;border:1px solid #4caf50;padding:10px 16px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
+.alert-err{background:#3a1a1a;color:#e74c3c;border:1px solid #e74c3c;padding:10px 16px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login_screen">
+<div class="login-wrap">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:22px;font-weight:700;color:var(--p)">БЕЛГРАНИТ</div>
+    <div style="font-size:13px;color:var(--tl);margin-top:4px">Панель администратора</div>
+  </div>
+  <div id="login_err" class="alert-err">Неверный пароль</div>
+  <input type="password" id="pwd_inp" class="inp" placeholder="Пароль"
+    onkeydown="if(event.key==='Enter')doLogin()">
+  <button class="btn" onclick="doLogin()">Войти</button>
+  <div style="text-align:center;margin-top:16px">
+    <a href="index.html" style="color:var(--tl);font-size:12px;text-decoration:none">← Вернуться к калькулятору</a>
+  </div>
+</div>
+</div>
+
+<!-- PANEL -->
+<div id="admin_panel" style="display:none">
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:15px;font-weight:700;color:var(--p)">БЕЛГРАНИТ</span>
+    <span style="font-size:12px;color:var(--tl)">Администратор</span>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button class="btn-sec" onclick="exportPrices()">⬇ Экспорт</button>
+    <label class="btn-sec" style="cursor:pointer">⬆ Импорт
+      <input type="file" accept=".json" style="display:none" onchange="importPrices(event)">
+    </label>
+    <button class="btn-sec" onclick="resetToDefault()">↺ Сброс</button>
+    <button class="btn-sec" onclick="saveAll()">💾 Сохранить</button>
+    <button onclick="doLogout()" style="background:transparent;border:1px solid var(--b);color:var(--tl);padding:8px 12px;border-radius:8px;font-size:12px;cursor:pointer">Выйти</button>
+  </div>
+</div>
+
+<div style="max-width:1100px;margin:0 auto;padding:16px">
+  <div id="save_ok" class="alert-ok">✓ Сохранено!</div>
+
+  <!-- Курс -->
+  <div class="section">
+    <div class="sec-hd" style="cursor:default">
+      <span class="sec-title">Курс доллара</span>
+    </div>
+    <div style="padding:12px 16px;display:flex;align-items:center;gap:10px">
+      <input type="number" id="rate_inp" step="0.01" class="td-inp td-price" style="font-size:15px;font-weight:700">
+      <span style="color:var(--tl);font-size:13px">BYN за 1 USD</span>
+      <button class="btn-sm" onclick="saveRate()">Сохранить</button>
+    </div>
+  </div>
+
+  <!-- Пароль -->
+  <div class="section">
+    <div class="sec-hd" style="cursor:default">
+      <span class="sec-title">Изменить пароль</span>
+    </div>
+    <div style="padding:12px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <input type="password" id="new_pwd" placeholder="Новый пароль" class="td-inp" style="width:160px">
+      <input type="password" id="new_pwd2" placeholder="Повторите" class="td-inp" style="width:160px">
+      <button class="btn-sm" onclick="changePwd()">Сохранить</button>
+      <span id="pwd_msg" style="font-size:12px;color:#4caf50;display:none">✓ Пароль изменён</span>
+    </div>
+  </div>
+
+  <!-- Прайсы -->
+  <div id="price_sections"></div>
+
+  <div style="text-align:center;margin-top:20px">
+    <a href="index.html" style="color:var(--tl);font-size:13px;text-decoration:none">← Вернуться к калькулятору</a>
+  </div>
+</div>
+</div>
+
+<script>
+const DEFAULT_PWD = 'belgranit2024';
+function getStoredPwd(){return localStorage.getItem('admin_pwd')||DEFAULT_PWD}
+
+function doLogin(){
+  if(document.getElementById('pwd_inp').value===getStoredPwd()){
+    localStorage.setItem('admin_auth','1');
+    document.getElementById('login_screen').style.display='none';
+    document.getElementById('admin_panel').style.display='block';
+    initAdmin();
+  } else {
+    const e=document.getElementById('login_err');
+    e.style.display='block';
+    setTimeout(()=>e.style.display='none',2000);
+  }
+}
+function doLogout(){localStorage.removeItem('admin_auth');location.reload()}
+function changePwd(){
+  const p1=document.getElementById('new_pwd').value;
+  const p2=document.getElementById('new_pwd2').value;
+  if(!p1)return;
+  if(p1!==p2){alert('Пароли не совпадают');return}
+  localStorage.setItem('admin_pwd',p1);
+  const m=document.getElementById('pwd_msg');
+  m.style.display='inline';
+  setTimeout(()=>m.style.display='none',2000);
+  document.getElementById('new_pwd').value='';
+  document.getElementById('new_pwd2').value='';
+}
+</script>
+</body>
+</html>
+
+<script>
+// Автовход
+if(localStorage.getItem('admin_auth')==='1'){
+  document.getElementById('login_screen').style.display='none';
+  document.getElementById('admin_panel').style.display='block';
+  document.addEventListener('DOMContentLoaded',initAdmin);
+}
+
+const SECTIONS=[
+  {key:'stele',label:'Стела',cur:'$'},
+  {key:'gravestone',label:'Надгробка',cur:'$'},
+  {key:'pedestal',label:'Подставка',cur:'$'},
+  {key:'flowerbed',label:'Цветник',cur:'$'},
+  {key:'post',label:'Столб / Пролёт',cur:'$'},
+  {key:'polish',label:'Полировка',cur:'$'},
+  {key:'art_stanok',label:'Худ. работа — Станок',cur:'$'},
+  {key:'art_std',label:'Пескоструй Стандарт',cur:'$'},
+  {key:'art_deep',label:'Пескоструй Углубленный',cur:'$'},
+];
+
+const DEFAULT_PRICES={
+  stele:[{name:'Стела 60х40х5',unit:'шт',price:57},{name:'Стела 80х40х5',unit:'шт',price:77},{name:'Стела 100х50х5',unit:'шт',price:120},{name:'Стела 100х60х5',unit:'шт',price:144},{name:'Стела 120х60х5',unit:'шт',price:173},{name:'Стела 100х50х8',unit:'шт',price:150},{name:'Стела 120х60х8',unit:'шт',price:216}],
+  gravestone:[{name:'Надгробка 100х50х3',unit:'шт',price:90},{name:'Надгробка 120х60х3',unit:'шт',price:128},{name:'Надгробка 50х30х3',unit:'шт',price:27},{name:'Надгробка 60х30х3',unit:'шт',price:32}],
+  pedestal:[{name:'Подставка 40х15х15',unit:'шт',price:40},{name:'Подставка 40х20х15',unit:'шт',price:54},{name:'Подставка 50х20х15',unit:'шт',price:65},{name:'Подставка 60х20х15',unit:'шт',price:75},{name:'Подставка 70х20х15',unit:'шт',price:85},{name:'Подставка 80х20х15',unit:'шт',price:100},{name:'Подставка 90х20х15',unit:'шт',price:120},{name:'Подставка 100х20х15',unit:'шт',price:127},{name:'Подставка 115х20х15',unit:'шт',price:152}],
+  flowerbed:[{name:'Цветник 100х8х5',unit:'м.п.',price:19},{name:'Цветник 100х10х5',unit:'м.п.',price:23},{name:'Цветник 100х10х8',unit:'м.п.',price:33},{name:'Цветник 120х8х5',unit:'шт',price:23},{name:'Цветник 120х10х5',unit:'шт',price:28},{name:'Цветник 120х10х8',unit:'шт',price:39}],
+  post:[{name:'Столб 100х10х10',unit:'м.п.',price:58},{name:'Столб 20х10х10 с фасками',unit:'шт',price:17},{name:'Столб 25х10х10 с фасками',unit:'шт',price:20},{name:'Столб 30х10х10 с фасками',unit:'шт',price:24},{name:'Столб 40х10х10 с фасками',unit:'шт',price:32},{name:'Пролет 100х8х5',unit:'м.п.',price:23},{name:'Пролет 100х10х5',unit:'м.п.',price:27},{name:'Пролет 100х10х8',unit:'м.п.',price:37},{name:'Пролет 100х20х3',unit:'м.п.',price:44},{name:'Пролет 100х15х3',unit:'м.п.',price:34}],
+  polish:[{name:'Торец 3см',unit:'м.п.',price:4},{name:'Торец 5см',unit:'м.п.',price:7},{name:'Торец 8см',unit:'м.п.',price:11},{name:'Торец 10см',unit:'м.п.',price:14},{name:'Волна (резка)',unit:'шт',price:30},{name:'Веер средней сложности (без полировки)',unit:'шт',price:40},{name:'Веер средней сложности (с полировкой)',unit:'шт',price:50},{name:'Крест стандарт с полировкой',unit:'шт',price:67},{name:'Плита «волна» резка + полировка',unit:'м.п.',price:11.5}],
+  art_stanok:[{name:'Текст',unit:'компл',price:13},{name:'Портрет',unit:'шт',price:17},{name:'Крест',unit:'шт',price:3},{name:'Цветы',unit:'компл',price:4},{name:'Пейзаж А4',unit:'шт',price:7},{name:'Пейзаж А4 с фото',unit:'шт',price:10},{name:'Четверостишие',unit:'компл',price:5},{name:'Портрет и текст на стеле 120см',unit:'компл',price:40}],
+  art_std:[{name:'Текст',unit:'компл',price:27},{name:'Портрет',unit:'шт',price:17},{name:'Крест',unit:'шт',price:5},{name:'Цветы',unit:'компл',price:8},{name:'Четверостишие',unit:'компл',price:11},{name:'Портрет и текст на стеле 120см',unit:'компл',price:60}],
+  art_deep:[{name:'Текст',unit:'компл',price:45},{name:'Портрет',unit:'шт',price:17},{name:'Крест',unit:'шт',price:9},{name:'Цветы',unit:'компл',price:14},{name:'Четверостишие',unit:'компл',price:17},{name:'Портрет и текст на стеле 120см',unit:'компл',price:85}],
+};
+
+function getPrices(){const s=localStorage.getItem('admin_prices');return s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_PRICES))}
+function savePrices(d){localStorage.setItem('admin_prices',JSON.stringify(d));localStorage.setItem('belgranit_prices',JSON.stringify(d))}
+
+function initAdmin(){
+  document.getElementById('rate_inp').value=localStorage.getItem('belgranit_rate')||'3';
+  renderSections();
+}
+
+function saveRate(){
+  localStorage.setItem('belgranit_rate',document.getElementById('rate_inp').value);
+  showOK();
+}
+
+function renderSections(){
+  const prices=getPrices();
+  document.getElementById('price_sections').innerHTML=SECTIONS.map(sec=>{
+    const items=prices[sec.key]||[];
+    const rows=items.map((it,i)=>`
+      <tr>
+        <td><input class="td-inp td-name" value="${it.name}" onchange="updateItem('${sec.key}',${i},'name',this.value)"></td>
+        <td><input class="td-inp td-unit" value="${it.unit}" onchange="updateItem('${sec.key}',${i},'unit',this.value)"></td>
+        <td><input type="number" class="td-inp td-price" value="${it.price}" step="0.5" onchange="updateItem('${sec.key}',${i},'price',parseFloat(this.value))"> ${sec.cur}</td>
+        <td><button class="btn-del" onclick="deleteItem('${sec.key}',${i})">✕</button></td>
+      </tr>
+    `).join('');
+    return`
+      <div class="section">
+        <div class="sec-hd" onclick="toggleSec('sec_${sec.key}')">
+          <span class="sec-title">${sec.label}<span class="badge">${items.length}</span></span>
+          <span style="color:var(--tl);font-size:12px" id="arr_${sec.key}">▾</span>
+        </div>
+        <div id="sec_${sec.key}">
+          <table><thead><tr><th>Название</th><th>Ед.</th><th>Цена</th><th></th></tr></thead>
+          <tbody>${rows}</tbody></table>
+          <div style="padding:10px 12px;border-top:1px solid var(--b)">
+            <button class="btn-sm" onclick="addItem('${sec.key}')">+ Добавить</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleSec(id){
+  const el=document.getElementById(id);
+  const key=id.replace('sec_','');
+  const arr=document.getElementById('arr_'+key);
+  const isOpen=el.style.display!=='none';
+  el.style.display=isOpen?'none':'block';
+  arr.textContent=isOpen?'▸':'▾';
+}
+
+function updateItem(k,i,f,v){const p=getPrices();p[k][i][f]=v;savePrices(p)}
+function deleteItem(k,i){if(!confirm('Удалить?'))return;const p=getPrices();p[k].splice(i,1);savePrices(p);renderSections()}
+function addItem(k){const p=getPrices();p[k].push({name:'Новая позиция',unit:'шт',price:0});savePrices(p);renderSections()}
+function saveAll(){savePrices(getPrices());saveRate();showOK()}
+function showOK(){const e=document.getElementById('save_ok');e.style.display='block';setTimeout(()=>e.style.display='none',2000)}
+
+function exportPrices(){
+  const data={prices:getPrices(),rate:document.getElementById('rate_inp').value,exported:new Date().toLocaleString('ru-RU')};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='belgranit_prices_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+
+function importPrices(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(data.prices){
+        savePrices(data.prices);
+        if(data.rate){localStorage.setItem('belgranit_rate',data.rate);document.getElementById('rate_inp').value=data.rate}
+        renderSections();
+        showOK();
+      }else alert('Неверный формат');
+    }catch(err){alert('Ошибка: '+err.message)}
+  };
+  r.readAsText(file);
+}
+
+function resetToDefault(){
+  if(!confirm('Сбросить все цены к значениям по умолчанию?'))return;
+  savePrices(JSON.parse(JSON.stringify(DEFAULT_PRICES)));
+  renderSections();
+  showOK();
+}
+
+if(localStorage.getItem('admin_auth')==='1'){
+  document.getElementById('login_screen').style.display='none';
+  document.getElementById('admin_panel').style.display='block';
+  document.addEventListener('DOMContentLoaded',initAdmin);
+}
+</script>
+</body>
+</html>

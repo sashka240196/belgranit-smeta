@@ -257,10 +257,30 @@ function loadState() {
     state.darkMode = localStorage.getItem('belgranit_theme') !== 'light';
     const savedEst = localStorage.getItem('belgranit_estimates');
     if (savedEst) state.savedEstimates = JSON.parse(savedEst);
-    
-    // Загружаем сохраненный режим и вкладку
     state.currentMode = localStorage.getItem('belgranit_mode') || 'wholesale';
     state.currentTab = localStorage.getItem('belgranit_tab') || 'catalog';
+
+    // Загружаем цены из админки
+    const adminPrices = localStorage.getItem('belgranit_prices');
+    if (adminPrices) {
+      const p = JSON.parse(adminPrices);
+      if (p.stele)      KARELIA_STELE.splice(0, KARELIA_STELE.length, ...p.stele);
+      if (p.gravestone) KARELIA_GRAVESTONE.splice(0, KARELIA_GRAVESTONE.length, ...p.gravestone);
+      if (p.pedestal)   KARELIA_PEDESTAL.splice(0, KARELIA_PEDESTAL.length, ...p.pedestal);
+      if (p.flowerbed)  KARELIA_FLOWERBED.splice(0, KARELIA_FLOWERBED.length, ...p.flowerbed);
+      if (p.post)       KARELIA_POST.splice(0, KARELIA_POST.length, ...p.post);
+      if (p.polish)     POLISHING.splice(0, POLISHING.length, ...p.polish);
+      if (p.art_stanok) ART_WORK.stanok.splice(0, ART_WORK.stanok.length, ...p.art_stanok);
+      if (p.art_std)    ART_WORK.peskostroy_standard.splice(0, ART_WORK.peskostroy_standard.length, ...p.art_std);
+      if (p.art_deep)   ART_WORK.peskostroy_deep.splice(0, ART_WORK.peskostroy_deep.length, ...p.art_deep);
+    }
+
+    // Загружаем курс из админки
+    const adminRate = localStorage.getItem('belgranit_rate');
+    if (adminRate) {
+      const rateEl = document.getElementById('rate');
+      if (rateEl) rateEl.value = adminRate;
+    }
   } catch (e) {}
 }
 
