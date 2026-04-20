@@ -1448,15 +1448,14 @@ function renderBlagoustrojstvo(container) {
       return `
       <tr class="cat-row blago-service-row" data-name="${item.name.toLowerCase()}">
         <td class="cat-row-name" style="font-size: 12px; padding: 4px 6px;">${item.name}</td>
-        <td class="cat-row-unit" style="font-size: 11px; padding: 4px 4px;">${item.unit}</td>
-        <td class="cat-row-price" style="padding: 4px 4px;">
+        <td class="cat-row-price" style="padding: 4px 4px; white-space:nowrap;">
           <input type="number" value="${priceBYN}" min="0" step="1"
             class="cat-price-inp" style="width: 60px; font-size: 11px; padding: 2px 4px;"
             onchange="updateBlagoPriceBYN('${item.name}', this.value)"
-            title="Изменить цену">${item.note ? `<br><span style="font-size:9px;color:var(--text-light)">${item.note}</span>` : ''}
+            title="Изменить цену"> <span style="font-size:10px;color:var(--text-light)">руб</span>${item.note ? `<br><span style="font-size:9px;color:var(--text-light)">${item.note}</span>` : ''}
         </td>
         <td class="cat-row-qty" style="padding: 4px 4px;">
-          ${qtyField}
+          ${qtyField} <span style="font-size:10px;color:var(--text-light);white-space:nowrap">${item.unit}</span>
         </td>
         <td style="padding: 4px;"><button class="cat-add-btn" style="font-size: 14px; padding: 2px 8px;" onclick='addBlagoToCart(${JSON.stringify(item)})'>+</button></td>
       </tr>
@@ -1625,15 +1624,14 @@ function renderGranitItems() {
       return `
       <tr class="cat-row granit-service-row" data-name="${item.name.toLowerCase()}">
         <td class="cat-row-name" style="font-size: 12px; padding: 4px 6px;">${item.name}</td>
-        <td class="cat-row-unit" style="font-size: 11px; padding: 4px 4px;">${item.unit}</td>
-        <td class="cat-row-price" style="padding: 4px 4px;">
+        <td class="cat-row-price" style="padding: 4px 4px; white-space:nowrap;">
           <input type="number" value="${priceBYN}" min="0" step="1"
             class="cat-price-inp" style="width: 60px; font-size: 11px; padding: 2px 4px;"
             onchange="updateGranitPriceBYN('${item.name}', this.value)"
-            title="Изменить цену">${item.note ? `<br><span style="font-size:9px;color:var(--text-light)">${item.note}</span>` : ''}
+            title="Изменить цену"> <span style="font-size:10px;color:var(--text-light)">руб</span>${item.note ? `<br><span style="font-size:9px;color:var(--text-light)">${item.note}</span>` : ''}
         </td>
         <td class="cat-row-qty" style="padding: 4px 4px;">
-          ${qtyField}
+          ${qtyField} <span style="font-size:10px;color:var(--text-light);white-space:nowrap">${item.unit}</span>
         </td>
         <td style="padding: 4px;"><button class="cat-add-btn" style="font-size: 14px; padding: 2px 8px;" onclick='addGranitToCart(${JSON.stringify(item)})'>+</button></td>
       </tr>
